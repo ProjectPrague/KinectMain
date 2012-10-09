@@ -3,6 +3,7 @@
 #include <afxwin.h>      //MFC core and standard components
 #include "resource.h"    //main symbols
 #include <afxcmn.h>		//needed for the slider
+#include <sstream>		//Needed for the conversion from int to String
 //-----------------------------------------------------------------------------------------
 //Globals
 CEdit * MFC_ecINPUT; //MFC_ prefix for easy recognizing of visual items
@@ -42,9 +43,9 @@ class MAINFORM: public CDialog
 		//Set the interface as you want it on your first run
 		MFC_ecINPUT->SetWindowText(L"Type Here"); 
 		//You need an LPCTSTR here. For this kind of string use, just prefix an L. For normal strings: convert to CString: CString s(str.c_str())		
-		MFC_scKINECTANGLE->SetRangeMax(27);
-		MFC_scKINECTANGLE->SetRangeMin(-27);		
-		MFC_scKINECTANGLE->SetPos(0);			
+		MFC_scKINECTANGLE->SetPos(0);
+		MFC_scKINECTANGLE->SetRange(-27, 27, TRUE);				
+		MFC_ecOUTPUT->SetWindowText(L"0");
 	}
 
 	
@@ -61,8 +62,11 @@ public:
 
 	void OnNMReleasedcapturekinectangle(NMHDR *pNMHDR, LRESULT *pResult)
 	{
-		
-	*pResult = 0;
+		std::stringstream ss;
+		ss << MFC_scKINECTANGLE ->GetPos();
+		CString text = ss.str().c_str();
+		MFC_ecOUTPUT ->SetWindowText(text);
+		*pResult = 0;
 	}
 
 // declares the message map =O
