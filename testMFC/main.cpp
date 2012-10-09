@@ -20,10 +20,10 @@ class MAINFORM: public CDialog
     virtual void DoDataExchange(CDataExchange* pDX) { CDialog::DoDataExchange(pDX); }
     //Called right after constructor. Initialize things here.
     virtual BOOL OnInitDialog() 
-    { 
-            CDialog::OnInitDialog();
+    {             
 			initializePointers();
 			initializeInterface();
+			CDialog::OnInitDialog();
             return true; 
     }
 
@@ -34,16 +34,17 @@ class MAINFORM: public CDialog
 		MFC_ecOUTPUT = (CEdit *) GetDlgItem(1003);
 		MFC_bGO = (CButton *) GetDlgItem(1002);	
 		MFC_scKINECTANGLE = (CSliderCtrl * ) GetDlgItem(SC_kinectAngle);
+		
 	}
 
 	void initializeInterface()
 	{
 		//Set the interface as you want it on your first run
 		MFC_ecINPUT->SetWindowText(L"Type Here"); 
-		//You need an LPCTSTR here. For this kind of string use, just prefix an L. For normal strings: convert to CString: CString s(str.c_str())
+		//You need an LPCTSTR here. For this kind of string use, just prefix an L. For normal strings: convert to CString: CString s(str.c_str())		
 		MFC_scKINECTANGLE->SetRangeMax(27);
-		MFC_scKINECTANGLE->SetRangeMin(-27);
-		MFC_scKINECTANGLE->SetPos(0);
+		MFC_scKINECTANGLE->SetRangeMin(-27);		
+		MFC_scKINECTANGLE->SetPos(0);			
 	}
 
 	
@@ -51,13 +52,20 @@ class MAINFORM: public CDialog
 // Event definition.
 public:
 	
-	afx_msg void button_go()
+	void MAINFORM::OnBnClickedgo()
 	{
 		CString text;
 		MFC_ecINPUT->GetWindowText(text);
 		MFC_ecOUTPUT ->SetWindowText(text);
 	}
 
+	void OnNMReleasedcapturekinectangle(NMHDR *pNMHDR, LRESULT *pResult)
+	{
+		
+	*pResult = 0;
+	}
+
+// declares the message map =O
 DECLARE_MESSAGE_MAP()
 };
 //-----------------------------------------------------------------------------------------
@@ -77,8 +85,16 @@ virtual BOOL InitInstance()
 };
 //-----------------------------------------------------------------------------------------
 //Need a Message Map Macro for both CDialog and CWinApp
-BEGIN_MESSAGE_MAP(MAINFORM, CDialog)
-	ON_COMMAND(B_go, button_go)
+BEGIN_MESSAGE_MAP(MAINFORM, CDialog)	
+	ON_NOTIFY(NM_RELEASEDCAPTURE, SC_kinectAngle, &MAINFORM::OnNMReleasedcapturekinectangle)
+	ON_BN_CLICKED(B_go, &MAINFORM::OnBnClickedgo)
 END_MESSAGE_MAP()
 //-----------------------------------------------------------------------------------------
 TheGame theApp;  //Starts the Application
+
+
+
+
+
+
+
