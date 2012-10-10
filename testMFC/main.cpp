@@ -4,12 +4,16 @@
 #include "resource.h"    //main symbols
 #include <afxcmn.h>		//needed for the slider
 #include <sstream>		//Needed for the conversion from int to String
+#include "kinect.h"		//for kinect stuff
 //-----------------------------------------------------------------------------------------
 //Globals
 CEdit * MFC_ecINPUT; //MFC_ prefix for easy recognizing of visual items
 CEdit * MFC_ecOUTPUT;
 CButton * MFC_bGO;
 CSliderCtrl * MFC_scKINECTANGLE;
+
+int sliderAngle;
+
 class MAINFORM: public CDialog
 {
     public:
@@ -55,15 +59,15 @@ public:
 	
 	void MAINFORM::OnBnClickedgo()
 	{
-		CString text;
-		MFC_ecINPUT->GetWindowText(text);
-		MFC_ecOUTPUT ->SetWindowText(text);
+		
 	}
 
 	void OnNMReleasedcapturekinectangle(NMHDR *pNMHDR, LRESULT *pResult)
 	{
 		std::stringstream ss;
-		ss << MFC_scKINECTANGLE ->GetPos();
+		
+		sliderAngle = MFC_scKINECTANGLE->GetPos() * -1;
+		ss << sliderAngle;
 		CString text = ss.str().c_str();
 		MFC_ecOUTPUT ->SetWindowText(text);
 		*pResult = 0;
@@ -73,10 +77,10 @@ public:
 DECLARE_MESSAGE_MAP()
 };
 //-----------------------------------------------------------------------------------------
-class TheGame : public CWinApp
+class AppStart : public CWinApp
 {
 public:
-TheGame() {  }
+AppStart() {  }
 public:
 virtual BOOL InitInstance()
 {
@@ -94,7 +98,7 @@ BEGIN_MESSAGE_MAP(MAINFORM, CDialog)
 	ON_BN_CLICKED(B_go, &MAINFORM::OnBnClickedgo)
 END_MESSAGE_MAP()
 //-----------------------------------------------------------------------------------------
-TheGame theApp;  //Starts the Application
+AppStart theApp;  //Starts the Application
 
 
 
