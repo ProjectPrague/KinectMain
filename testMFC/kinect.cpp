@@ -4,7 +4,6 @@
 #include "kinect.h"
 
 
-
 KinectManager::KinectManager()
 {
 
@@ -16,6 +15,7 @@ HRESULT KinectManager::initialize()
 	INuiSensor * nui;
 	int nuiCount = 0;
 	HRESULT hr;
+	nui ->id
 
 	hr = NuiGetSensorCount(&nuiCount);
 	if ( FAILED(hr))
@@ -38,7 +38,6 @@ HRESULT KinectManager::initialize()
 		if (S_OK == hr)
 		{
 			nuiList.push_front(nui);
-			globalNui = nui;
 			break;
 		}
 
@@ -46,22 +45,40 @@ HRESULT KinectManager::initialize()
 		nui->Release();
 	}
 
-	if (NULL != globalNui)
-	{
+	return hr;
 
+
+}
+
+Kinect::Kinect(INuiSensor * globalNui)
+{
+	// da creator.
+	this->globalNui = globalNui;
+}
+
+Kinect::~Kinect()
+{
+	globalNui->NuiShutdown();
+
+	globalNui->Release();
+	globalNui = NULL;
+}
+
+HRESULT Kinect::initialize()
+{
+	HRESULT hr;
+
+		if (NULL != globalNui)
+	{
 		hr = globalNui->NuiInitialize(NUI_INITIALIZE_FLAG_USES_COLOR);
 		if(SUCCEEDED(hr))
 		{
 
 		}
 	}
-
-	return hr;
-
-
 }
 
-int KinectManager::getKinectAngle()
+int Kinect::getKinectAngle()
 {
 	LONG longAngle = -28;
 	HRESULT hr;
@@ -76,7 +93,7 @@ int KinectManager::getKinectAngle()
 	return (int)longAngle;
 }
 
-void KinectManager::setKinectAngle(int angle)
+void Kinect::setKinectAngle(int angle)
 {
 	HRESULT hr;
 
@@ -86,7 +103,5 @@ void KinectManager::setKinectAngle(int angle)
 	{
 
 	}
-
-
 
 }
