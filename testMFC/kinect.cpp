@@ -2,13 +2,15 @@
 
 #include <iostream>
 #include "kinect.h"
-#include <list>
-#include "NuiApi.h"
+
+
 
 KinectManager::KinectManager()
 {
 
 }
+
+
 HRESULT KinectManager::initialize()
 {
 	INuiSensor * nui;
@@ -35,17 +37,56 @@ HRESULT KinectManager::initialize()
 		hr = nui->NuiStatus();
 		if (S_OK == hr)
 		{
-			//nuiList->push_front(*nui);
+			nuiList.push_front(nui);
+			globalNui = nui;
+			break;
 		}
 
 		// This sensor was not okay, so we release it (into the wild!) since we're not using it.
 		nui->Release();
 	}
 
-	
+	if (NULL != globalNui)
+	{
 
+		hr = globalNui->NuiInitialize(NUI_INITIALIZE_FLAG_USES_COLOR);
+		if(SUCCEEDED(hr))
+		{
 
+		}
+	}
 
 	return hr;
+
+
 }
 
+int KinectManager::getKinectAngle()
+{
+	LONG longAngle = -28;
+	HRESULT hr;
+
+	hr = globalNui->NuiCameraElevationGetAngle(&longAngle);
+
+	if(FAILED(hr))
+	{
+		return hr;
+	}
+
+	return (int)longAngle;
+}
+
+void KinectManager::setKinectAngle(int angle)
+{
+	HRESULT hr;
+
+	hr = globalNui->NuiCameraElevationSetAngle(angle);
+
+	if(FAILED(hr))
+	{
+
+	}
+
+
+
+}

@@ -7,10 +7,13 @@
 #include "kinect.h"		//for kinect stuff
 //-----------------------------------------------------------------------------------------
 //Globals
-CEdit * MFC_ecINPUT; //MFC_ prefix for easy recognizing of visual items
-CEdit * MFC_ecOUTPUT;
-CButton * MFC_bGO;
+CEdit * MFC_ecCURVAL; //MFC_ prefix for easy recognizing of visual items
+CEdit * MFC_ecNEWVAL;
+CButton * MFC_bSETVAL;
 CSliderCtrl * MFC_scKINECTANGLE;
+CStatic * MFC_stCURVAL;
+CStatic * MFC_stNEWVAL;
+KinectManager * kinectManager;
 
 int sliderAngle;
 
@@ -26,6 +29,7 @@ class MAINFORM: public CDialog
     //Called right after constructor. Initialize things here.
     virtual BOOL OnInitDialog() 
     {             
+
 			initializePointers();
 			initializeInterface();
 			CDialog::OnInitDialog();
@@ -35,21 +39,34 @@ class MAINFORM: public CDialog
 	void initializePointers()
 	{
 		//initialize all MFC pointers: map them to the objects in the resource.
-		MFC_ecINPUT = (CEdit *) GetDlgItem(1001); //Both the numeral ID and the "real" ID may be used here. 1001 refers to EC_input, so GetDlgItem(EC_input) is also possible
-		MFC_ecOUTPUT = (CEdit *) GetDlgItem(1003);
-		MFC_bGO = (CButton *) GetDlgItem(1002);	
-		MFC_scKINECTANGLE = (CSliderCtrl * ) GetDlgItem(SC_kinectAngle);
+		//Both the numeral ID and the "real" ID may be used here. 1001 refers to EC_input, so GetDlgItem(EC_input) is also possible
+		//All the IDs can be found inside the resource.h file.
+		kinectManager = new KinectManager;
+		kinectManager->initialize();
+		MFC_ecCURVAL = (CEdit *) GetDlgItem(1003); 
+		MFC_ecNEWVAL = (CEdit *) GetDlgItem(1004);
+		MFC_bSETVAL = (CButton *) GetDlgItem(1002);	
+		MFC_scKINECTANGLE = (CSliderCtrl * ) GetDlgItem(1005);
+		MFC_stCURVAL = (CStatic *) GetDlgItem(1006);
+		MFC_stNEWVAL = (CStatic *) GetDlgItem(1007);
 		
 	}
 
 	void initializeInterface()
 	{
+		// Stringstream usage to turn the int that is returned by getKinectAngle into a string to use it om SetWindowText.
+		std::stringstream ss;
+		ss << kinectManager->getKinectAngle();
+		CString text = ss.str().c_str();
+
 		//Set the interface as you want it on your first run
-		MFC_ecINPUT->SetWindowText(L"Type Here"); 
-		//You need an LPCTSTR here. For this kind of string use, just prefix an L. For normal strings: convert to CString: CString s(str.c_str())		
+		//You need an LPCTSTR for a SetWindowText. For this kind of string use, just prefix an L. For normal strings: convert to CString: CString s(str.c_str())
+		MFC_stCURVAL->SetWindowText(L"Current Kinect Angle");
+		MFC_stNEWVAL->SetWindowText(L"New Kinect Angle");
+		MFC_ecCURVAL->SetWindowText(text);
+		MFC_ecNEWVAL->SetWindowText(L"0");
 		MFC_scKINECTANGLE->SetPos(0);
-		MFC_scKINECTANGLE->SetRange(-27, 27, TRUE);				
-		MFC_ecOUTPUT->SetWindowText(L"0");
+		MFC_scKINECTANGLE->SetRange(-27, 27, TRUE);	
 	}
 
 	
@@ -57,11 +74,6 @@ class MAINFORM: public CDialog
 // Event definition.
 public:
 	
-	void MAINFORM::OnBnClickedgo()
-	{
-		
-	}
-
 	void OnNMReleasedcapturekinectangle(NMHDR *pNMHDR, LRESULT *pResult)
 	{
 		std::stringstream ss;
@@ -69,8 +81,20 @@ public:
 		sliderAngle = MFC_scKINECTANGLE->GetPos() * -1;
 		ss << sliderAngle;
 		CString text = ss.str().c_str();
-		MFC_ecOUTPUT ->SetWindowText(text);
+		MFC_ecNEWVAL->SetWindowText(text);
 		*pResult = 0;
+	}
+
+	void OnBnClickedsetval()
+	{
+		// When the buttons has been clicked, set the angle of the kinect.
+		kinectManager->setKinectAngle(sliderAngle);
+
+		// After setting the kinect angle, update the current value from the kinect.
+		std::stringstream ss;
+		ss << kinectManager->getKinectAngle(); // Value comes from the kinect.
+		CString text = ss.str().c_str();
+		MFC_ecCURVAL->SetWindowText(text);
 	}
 
 // declares the message map =O
@@ -94,15 +118,8 @@ virtual BOOL InitInstance()
 //-----------------------------------------------------------------------------------------
 //Need a Message Map Macro for both CDialog and CWinApp
 BEGIN_MESSAGE_MAP(MAINFORM, CDialog)	
-	ON_NOTIFY(NM_RELEASEDCAPTURE, SC_kinectAngle, &MAINFORM::OnNMReleasedcapturekinectangle)
-	ON_BN_CLICKED(B_go, &MAINFORM::OnBnClickedgo)
+	ON_NOTIFY(NM_RELEASEDCAPTURE, SC_kinectAngle, &MAINFORM::OnNMReleasedcapturekinectangle)	
+	ON_BN_CLICKED(B_setVal, &MAINFORM::OnBnClickedsetval)
 END_MESSAGE_MAP()
 //-----------------------------------------------------------------------------------------
 AppStart theApp;  //Starts the Application
-
-
-
-
-
-
-
