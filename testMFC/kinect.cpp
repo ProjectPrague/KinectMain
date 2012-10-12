@@ -9,13 +9,16 @@ KinectManager::KinectManager()
 
 }
 
+std::list<INuiSensor*> KinectManager::getNuiList()
+{
+	return nuiList;
+}
 
 HRESULT KinectManager::initialize()
 {
 	INuiSensor * nui;
 	int nuiCount = 0;
 	HRESULT hr;
-	nui ->id
 
 	hr = NuiGetSensorCount(&nuiCount);
 	if ( FAILED(hr))
@@ -50,6 +53,23 @@ HRESULT KinectManager::initialize()
 
 }
 
+Kinect * KinectManager::selectKinect(CString selected)
+{
+	int i = 0;
+	for (std::list<INuiSensor*>::const_iterator it = nuiList.begin();it != nuiList.end();++it)
+	{
+		CString convert = (LPCTSTR) (*it)->NuiUniqueId();
+
+		if(convert.Compare(selected) != 0)
+		{
+			Kinect * kinect = new Kinect((*it));
+			kinect->initialize();
+			return kinect;
+		}
+	}
+	i++;
+}
+
 Kinect::Kinect(INuiSensor * globalNui)
 {
 	// da creator.
@@ -73,10 +93,12 @@ HRESULT Kinect::initialize()
 		hr = globalNui->NuiInitialize(NUI_INITIALIZE_FLAG_USES_COLOR);
 		if(SUCCEEDED(hr))
 		{
-
+			
 		}
 	}
+		return hr;
 }
+
 
 int Kinect::getKinectAngle()
 {

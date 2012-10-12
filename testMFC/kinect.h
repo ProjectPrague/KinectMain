@@ -1,18 +1,8 @@
 //header file for the kinect.cpp file.
-
+#include <afxwin.h>			//MFC core and standard components
 #include "windows.h"
 #include "NuiApi.h"
 #include <list>
-class KinectManager{
-public:
-	KinectManager();
-	~KinectManager();
-	
-	HRESULT initialize();
-
-private:
-	std::list<INuiSensor*> nuiList;
-};
 
 class Kinect{
 public:
@@ -26,4 +16,16 @@ private:
 
 	INuiSensor* globalNui;
 
+};
+
+class KinectManager{
+public:
+	KinectManager();
+	~KinectManager();
+	std::list<INuiSensor*> getNuiList();
+	HRESULT initialize();
+	Kinect * selectKinect(CString selected);
+
+private:
+	std::list<INuiSensor*> nuiList;
 };
