@@ -140,6 +140,7 @@ public:
 
 // declares the message map =O
 DECLARE_MESSAGE_MAP()
+afx_msg void OnStnClickedColor();
 };
 //-----------------------------------------------------------------------------------------
 class AppStart : public CWinApp
@@ -161,6 +162,12 @@ virtual BOOL InitInstance()
 BEGIN_MESSAGE_MAP(MAINFORM, CDialog)	
 	ON_NOTIFY(NM_RELEASEDCAPTURE, SC_kinectAngle, &MAINFORM::OnNMReleasedcapturekinectangle)	
 	ON_BN_CLICKED(B_setVal, &MAINFORM::OnBnClickedsetval)
+	ON_STN_CLICKED(PC_COLOR, &MAINFORM::OnStnClickedColor)
 END_MESSAGE_MAP()
 //-----------------------------------------------------------------------------------------
 AppStart theApp;  //Starts the Application
+
+void MAINFORM::OnStnClickedColor()
+{
+	// TODO: Add your control notification handler code here
+}

@@ -90,13 +90,29 @@ HRESULT Kinect::initialize()
 
 		if (NULL != globalNui)
 	{
-		hr = globalNui->NuiInitialize(NUI_INITIALIZE_FLAG_USES_COLOR);
+
+		hr = globalNui->NuiInitialize(NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX | NUI_INITIALIZE_FLAG_USES_SKELETON | NUI_INITIALIZE_FLAG_USES_COLOR);
+
 		if(SUCCEEDED(hr))
 		{
 			
 		}
 	}
-		return hr;
+
+	nextDepthFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
+    nextColorFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
+    nextSkeletonEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
+
+    // reset the tracked skeletons, range, and tracking mode
+    // SendDlgItemMessage(m_hWnd, IDC_TRACKEDSKELETONS, CB_SETCURSEL, 0, 0);
+    // SendDlgItemMessage(m_hWnd, IDC_TRACKINGMODE, CB_SETCURSEL, 0, 0);
+    // SendDlgItemMessage(m_hWnd, IDC_RANGE, CB_SETCURSEL, 0, 0);
+
+	// recource ensurement? 
+
+	
+
+	return hr;
 }
 
 

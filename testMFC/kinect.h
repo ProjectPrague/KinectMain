@@ -16,6 +16,10 @@ private:
 
 	INuiSensor* globalNui;
 
+    HANDLE        nextDepthFrameEvent;
+    HANDLE        nextColorFrameEvent;
+    HANDLE        nextSkeletonEvent;
+
 };
 
 class KinectManager{
