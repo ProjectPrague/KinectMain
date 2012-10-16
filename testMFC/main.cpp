@@ -30,6 +30,7 @@ class MAINFORM: public CDialog
 {
 private:
 	std::map<int, BSTR> kinectMap;
+	
 
 public:
     MAINFORM(CWnd* pParent = NULL): CDialog(MAINFORM::IDD, pParent)
@@ -107,7 +108,7 @@ protected:
 	void initializeKinect()
 	{
 		kinectManager = new KinectManager;
-		kinectManager->initialize();
+		kinectManager->initialize(this->GetSafeHwnd());
 		nuiList = kinectManager->getNuiList();
 	}
 	

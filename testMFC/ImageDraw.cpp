@@ -2,7 +2,14 @@
 #include "Collection.h"
 
 // Constructor
-ImageDraw::ImageDraw()
+ImageDraw::ImageDraw() :
+	    iDisplay(0),
+    sourceWidth(0),
+    sourceHeight(0),
+    sourceStride(0),
+    d2DFactory(NULL), 
+    renderTarget(NULL),
+    bitmap(0)
 {
 
 }
@@ -62,6 +69,7 @@ void ImageDraw::Discard()
 
 bool ImageDraw::Initialize( HWND hWnd, ID2D1Factory * pD2DFactory, int sourceWidth, int sourceHeight, int sourceStride )
 {
+	
 	if ( NULL == pD2DFactory)
 	{
 		return false;
