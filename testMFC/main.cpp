@@ -23,6 +23,7 @@ CComboBox * MFC_cbKinectList;
 KinectManager * kinectManager;
 Kinect * kinect;
 std::list<INuiSensor*> nuiList;
+CStatic * MFC_ecFPSCOLOR;
 
 int sliderAngle;
 
@@ -62,6 +63,7 @@ protected:
 		MFC_stCURVAL = (CStatic *) GetDlgItem(1006);
 		MFC_stNEWVAL = (CStatic *) GetDlgItem(1007);
 		MFC_cbKinectList = (CComboBox *) GetDlgItem(1008);
+		MFC_ecFPSCOLOR = (CStatic *) GetDlgItem(1015);
 	}
 
 	void initializeInterface()
@@ -100,10 +102,11 @@ protected:
 		MFC_scKINECTANGLE->SetPos(0);
 		MFC_scKINECTANGLE->SetRange(-27, 27, TRUE);
 
+		CFont * cf = new CFont();
+		//GetObject( (HFONT)GetStockObject(DEFAULT_GUI_FONT
+		cf->CreatePointFont(300,L"Starcraft");
+		MFC_ecFPSCOLOR->SetFont(cf);
 
-
-		
-		
 	} 
 	void initializeKinect()
 	{
@@ -139,9 +142,8 @@ public:
 		MFC_ecCURVAL->SetWindowText(text);
 	}
 
-// declares the message map =O
+// declares the message map
 DECLARE_MESSAGE_MAP()
-afx_msg void OnStnClickedColor();
 };
 //-----------------------------------------------------------------------------------------
 class AppStart : public CWinApp
@@ -163,12 +165,6 @@ virtual BOOL InitInstance()
 BEGIN_MESSAGE_MAP(MAINFORM, CDialog)	
 	ON_NOTIFY(NM_RELEASEDCAPTURE, SC_kinectAngle, &MAINFORM::OnNMReleasedcapturekinectangle)	
 	ON_BN_CLICKED(B_setVal, &MAINFORM::OnBnClickedsetval)
-	ON_STN_CLICKED(PC_COLOR, &MAINFORM::OnStnClickedColor)
 END_MESSAGE_MAP()
 //-----------------------------------------------------------------------------------------
 AppStart theApp;  //Starts the Application
-
-void MAINFORM::OnStnClickedColor()
-{
-	// TODO: Add your control notification handler code here
-}

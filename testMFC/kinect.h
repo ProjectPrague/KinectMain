@@ -60,7 +60,6 @@ private:
 	//  DWORD       lastSkeletonFoundTime;
 	//  bool        screenBlanked;
 	//  int         depthFramesTotal;
-	//  DWORD       lastDepthFPStime;
 	//  int			lastDepthFramesTotal;
 	//  int			trackedSkeletons;
 	//  DWORD		skeletonTrackingFlags;

@@ -2,7 +2,8 @@
 
 #include <iostream>
 #include "kinect.h"
-
+#include <mmsystem.h>
+#include <sstream>		//Needed for the conversion from int to String
 
 KinectManager::KinectManager()
 {
@@ -159,11 +160,13 @@ DWORD WINAPI Kinect::ProcessThread()
 {
 	const int numEvents = 2;
 	HANDLE handleEvents[numEvents] = { treadNuiProcessStop, nextColorFrameEvent };
-	int eventIdx;
-//	DWORD t;
+	int eventIdx, ColorFrameFPS = 0;
+	DWORD t, lastColorFPStime;
+	CStatic * MFC_ecFPSCOLOR;
+	
+	std::stringstream ss;
 
-	// get fps time.
-
+	lastColorFPStime = timeGetTime( );
 	// blank the skeleton display on startup
 
 	bool continueProcess = true;
@@ -195,8 +198,21 @@ DWORD WINAPI Kinect::ProcessThread()
 
 		if ( WAIT_OBJECT_0 == WaitForSingleObject( nextColorFrameEvent, 0) )
 		{
-			gotColorAlert();
+			if( gotColorAlert() )
+			{
+				++ColorFrameFPS; 
+			}
 		}
+
+		t = timeGetTime();
+		if((t - lastColorFPStime) > 1000)
+	{
+		ss<<ColorFrameFPS;
+		CString TextFPS= ss.str().c_str();
+		MFC_ecFPSCOLOR->SetWindowTextW(L"TEST");
+		ColorFrameFPS = 0;
+		lastColorFPStime = timeGetTime();
+	}
 	}
 	return 0;
 }
