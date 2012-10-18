@@ -3,13 +3,13 @@
 
 // Constructor
 ImageDraw::ImageDraw() :
-	    iDisplay(0),
-    sourceWidth(0),
-    sourceHeight(0),
-    sourceStride(0),
-    d2DFactory(NULL), 
-    renderTarget(NULL),
-    bitmap(0)
+	iDisplay(0),
+	sourceWidth(0),
+	sourceHeight(0),
+	sourceStride(0),
+	d2DFactory(NULL), 
+	renderTarget(NULL),
+	bitmap(0)
 {
 
 }
@@ -52,7 +52,7 @@ HRESULT ImageDraw::CreateResources()
 
 		if ( FAILED(hr) )
 		{
-			// TO DO safe release?
+			SafeRelease( renderTarget );
 			return hr;
 		}
 	}
@@ -60,6 +60,7 @@ HRESULT ImageDraw::CreateResources()
 	return hr;
 }
 
+//Safely discard the Direct2d resources.
 void ImageDraw::Discard()
 {
 	SafeRelease(renderTarget);
@@ -69,7 +70,7 @@ void ImageDraw::Discard()
 
 bool ImageDraw::Initialize( HWND hWnd, ID2D1Factory * pD2DFactory, int sourceWidth, int sourceHeight, int sourceStride )
 {
-	
+
 	if ( NULL == pD2DFactory)
 	{
 		return false;
@@ -90,6 +91,7 @@ bool ImageDraw::Initialize( HWND hWnd, ID2D1Factory * pD2DFactory, int sourceWid
 	return true;
 }
 
+// GDP = ?
 bool ImageDraw::GDP ( BYTE * image, unsigned long cbImage )
 {
 	// Check for inforrectly sized image data.
@@ -106,7 +108,7 @@ bool ImageDraw::GDP ( BYTE * image, unsigned long cbImage )
 	{
 		return false;
 	}
-	
+
 	// copy the image that was passed in into the direct2d bitmap
 	hr = bitmap->CopyFromMemory( NULL, image, sourceStride);
 

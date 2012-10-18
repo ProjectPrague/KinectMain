@@ -19,12 +19,16 @@ public:
 	HWND hWnd;
 
 private:
-
+	//Handles for the specific data.
 	bool gotColorAlert();
+	bool gotDepthAlert();
 
+	// Global NuiSensor.
 	INuiSensor* globalNui;
 
 	HRESULT D2DResources();
+
+	void UpdateDepthFlag( DWORD flag, bool value);
 
 	// Thread to handle Kinect processing, calls class instance thread processor.
 	static DWORD WINAPI ProcessThread( LPVOID pParam );
@@ -56,19 +60,21 @@ private:
 	HANDLE        videoStreamHandle;
 
 	//	HFONT		fontFPS;
-	//  BYTE		depthRGBX[640*480*4];
+	BYTE		depthRGBX[640*480*4];
 	//  DWORD       lastSkeletonFoundTime;
 	//  bool        screenBlanked;
 	//  int         depthFramesTotal;
 	//  int			lastDepthFramesTotal;
 	//  int			trackedSkeletons;
 	//  DWORD		skeletonTrackingFlags;
-	//  DWORD		depthStreamFlags;
+	DWORD		depthStreamFlags;
 
 
 
 };
 
+
+// In control of / takes care of.
 class KinectManager
 {
 public:

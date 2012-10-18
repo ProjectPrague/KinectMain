@@ -90,6 +90,11 @@ protected:
 			MFC_cbKinectList->SetCurSel(0);
 		}
 
+		if(kinectMap.size == 0)
+		{
+			// do shit.
+		}
+
 		ss << kinect->getKinectAngle();
 		CString text = ss.str().c_str();
 
