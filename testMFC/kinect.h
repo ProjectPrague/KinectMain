@@ -59,7 +59,6 @@ private:
 	HANDLE        depthStreamHandle;
 	HANDLE        videoStreamHandle;
 
-	//	HFONT		fontFPS;
 	BYTE		depthRGBX[640*480*4];
 	//  DWORD       lastSkeletonFoundTime;
 	//  bool        screenBlanked;
@@ -80,11 +79,13 @@ class KinectManager
 public:
 	KinectManager();
 	~KinectManager();
-	std::list<INuiSensor*> getNuiList();
+	std::list<INuiSensor*> DiscoverList();
+	std::list<INuiSensor*> getGlobalNuiList();
 	HRESULT initialize(HWND hWnd);
 	Kinect * selectKinect(CString selected);
 
 private:
+	static void CALLBACK OnSensorStatusChanged( HRESULT hr, const OLECHAR* instanceName, const OLECHAR* uniqueDeviceName, void* userData);
 	HWND hwnd;
 	std::list<INuiSensor*> nuiList;
 };

@@ -91,7 +91,7 @@ bool ImageDraw::Initialize( HWND hWnd, ID2D1Factory * pD2DFactory, int sourceWid
 	return true;
 }
 
-// GDP = ?
+// GDP = Grafical Data Processor.
 bool ImageDraw::GDP ( BYTE * image, unsigned long cbImage )
 {
 	// Check for inforrectly sized image data.

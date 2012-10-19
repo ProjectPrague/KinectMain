@@ -23,7 +23,7 @@ CComboBox * MFC_cbKinectList;
 KinectManager * kinectManager;
 Kinect * kinect;
 std::list<INuiSensor*> nuiList;
-CStatic * MFC_ecFPSCOLOR;
+CStatic * MFC_ecFPSCOLOR, * MFC_ecDEPTHCOLOR;
 
 int sliderAngle;
 
@@ -64,6 +64,7 @@ protected:
 		MFC_stNEWVAL = (CStatic *) GetDlgItem(1007);
 		MFC_cbKinectList = (CComboBox *) GetDlgItem(1008);
 		MFC_ecFPSCOLOR = (CStatic *) GetDlgItem(1015);
+		MFC_ecDEPTHCOLOR = (CStatic *) GetDlgItem(1016);
 	}
 
 	void initializeInterface()
@@ -90,7 +91,7 @@ protected:
 			MFC_cbKinectList->SetCurSel(0);
 		}
 
-		if(kinectMap.size == 0)
+		if(kinectMap.size() == 0)
 		{
 			// do shit.
 		}
@@ -111,13 +112,13 @@ protected:
 		//GetObject( (HFONT)GetStockObject(DEFAULT_GUI_FONT
 		cf->CreatePointFont(300,L"Starcraft");
 		MFC_ecFPSCOLOR->SetFont(cf);
-
+		MFC_ecDEPTHCOLOR->SetFont(cf);
 	} 
 	void initializeKinect()
 	{
 		kinectManager = new KinectManager;
 		kinectManager->initialize(this->GetSafeHwnd());
-		nuiList = kinectManager->getNuiList();
+		nuiList = kinectManager->getGlobalNuiList();
 	}
 	
 //-----------------------------------------------------------------------------------------

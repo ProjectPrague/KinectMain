@@ -4,6 +4,8 @@
 #include "kinect.h"
 #include <mmsystem.h>
 #include <sstream>		//Needed for the conversion from int to String
+#include <assert.h>
+#include <comdef.h>
 
 //lookups for color tinting based on player index. (? Nog onbekend voor mij.)
 static const int intensityShiftByPlayerR[] = { 1, 2, 0, 2, 0, 0, 2, 0 };
@@ -18,7 +20,7 @@ KinectManager::KinectManager()
 
 }
 
-std::list<INuiSensor*> KinectManager::getNuiList()
+std::list<INuiSensor*> KinectManager::getGlobalNuiList()
 {
 	return nuiList;
 }
@@ -27,8 +29,11 @@ HRESULT KinectManager::initialize(HWND hWnd)
 {
 	INuiSensor * nui;
 	int nuiCount = 0;
-	HRESULT hr;
+	HRESULT hr, test;
 	this->hwnd = hWnd;
+
+
+	NuiSetDeviceStatusCallback(OnSensorStatusChanged, NULL);
 
 	hr = NuiGetSensorCount(&nuiCount);
 	if ( FAILED(hr))
@@ -48,6 +53,14 @@ HRESULT KinectManager::initialize(HWND hWnd)
 
 		// Get the status of the sensor, and if connected, then we can initialize it.
 		hr = nui->NuiStatus();
+		test = S_OK;
+		_com_error error(test);
+		OutputDebugString(L"------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
+		OutputDebugString(error.ErrorMessage());
+		OutputDebugString(L"\n");
+		OutputDebugString(L"------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
+		
+
 		if (S_OK == hr)
 		{
 			nuiList.push_front(nui);
@@ -85,6 +98,49 @@ Kinect * KinectManager::selectKinect(CString selected)
 	return NULL;
 }
 
+void CALLBACK KinectManager::OnSensorStatusChanged( HRESULT hr, const OLECHAR* instanceName, const OLECHAR* uniqueDeviceName, void* userData)
+{
+	OutputDebugString( L"KEIN KINECT.\r\n" );
+}
+
+//std::list<INuiSensor*> KinectManager::DiscoverList()
+//{
+//	INuiSensor * nui;
+//	int nuiCount = 0;
+//	HRESULT hr;
+//	std::list<INuiSensor *> kinectList;
+//
+//	hr = NuiGetSensorCount(&nuiCount);
+//	if ( FAILED(hr))
+//	{
+//		return kinectList;
+//	}
+//
+//	// Look at each kinect sensor
+//	for (int i = 0; i < nuiCount; i++)
+//	{
+//		// Create the sensor so we can check status, if we can't create it, move on.
+//		hr = NuiCreateSensorByIndex(i, &nui);
+//		if (FAILED(hr))
+//		{
+//			continue;
+//		}
+//
+//		// Get the status of the sensor, and if connected, then we can initialize it.
+//		hr = nui->NuiStatus();
+//		if (S_OK == hr)
+//		{
+//			nuiList.push_front(nui);
+//			break;
+//		}
+//
+//		// This sensor was not okay, so we release it (into the wild!) since we're not using it.
+//		nui->Release();
+//	}
+//
+//	return;
+//}
+
 Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 {
 	// da creator.
@@ -116,7 +172,7 @@ HRESULT Kinect::initialize()
 	D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &d2DFactory);
 
 	drawDepth = new ImageDraw();
-	result = drawDepth->Initialize( GetDlgItem( hWnd, PC_DEPTH), d2DFactory, 320, 240, 320 * 4);
+	result = drawDepth->Initialize( GetDlgItem( hWnd, 1011), d2DFactory, 320, 240, 320 * 4);
 	if (!result )
 	{
 		// Display error regarding the depth.
@@ -165,7 +221,7 @@ HRESULT Kinect::initialize()
 		depthStreamFlags,
 		2,
 		nextDepthFrameEvent,
-		&videoStreamHandle );
+		&depthStreamHandle );
 
 	// error toevoegen voor de depth stream
 
@@ -189,19 +245,24 @@ DWORD WINAPI Kinect::ProcessThread( LPVOID param )		// LPVOID is a VOID LONG POI
 DWORD WINAPI Kinect::ProcessThread()
 {
 	//numEvents is the number of events, handleEvents is an Array of all the events being handled.
-	const int numEvents = 2;
-	HANDLE handleEvents[numEvents] = { treadNuiProcessStop, nextColorFrameEvent };
+	const int numEvents = 3;
+	HANDLE handleEvents[numEvents] = { treadNuiProcessStop, nextColorFrameEvent, nextDepthFrameEvent };
 	std::stringstream ss;
-	int eventIdx, ColorFrameFPS = 0;
-	DWORD t, lastColorFPStime;
+	int eventIdx, colorFrameFPS = 0, depthFrameFPS = 0;
+	DWORD t, lastColorFPSTime, lastDepthFPSTime;
 	CString TextFPS;
-	CStatic * MFC_ecFPSCOLOR;
+
+	// Initializes the static text fields for FPS text.
+	CStatic * MFC_ecFPSCOLOR, * MFC_ecFPSDEPTH;
 	CWnd cWnd;
 	cWnd.m_hWnd = hWnd;
 	MFC_ecFPSCOLOR = (CStatic *) cWnd.GetDlgItem(1015);
+	MFC_ecFPSDEPTH = (CStatic *) cWnd.GetDlgItem(1016);
+
 	//Erachter komen en uitleggen waarom bovenstaande wel werkt. Uitleg, Jacko?
 
-	lastColorFPStime = timeGetTime( );
+	lastColorFPSTime = timeGetTime( );
+	lastDepthFPSTime = timeGetTime( );
 	// blank the skeleton display on startup
 
 	bool continueProcess = true;
@@ -231,11 +292,19 @@ DWORD WINAPI Kinect::ProcessThread()
 		// is essential, a priority queue should be used to service the item
 		// which has been updated the longest ago Copyright Microsoft.
 
+		if ( WAIT_OBJECT_0 == WaitForSingleObject( nextDepthFrameEvent, 0) )
+		{
+			if( gotDepthAlert() )
+			{
+				++depthFrameFPS;
+			}
+		}
+
 		if ( WAIT_OBJECT_0 == WaitForSingleObject( nextColorFrameEvent, 0) )
 		{
 			if( gotColorAlert() )
 			{
-				++ColorFrameFPS; 
+				++colorFrameFPS; 
 			}
 		}
 
@@ -243,13 +312,22 @@ DWORD WINAPI Kinect::ProcessThread()
 		// compare first frametime with the current time, if more then 1000 passed,
 		// one second passed.
 		t = timeGetTime();
-		if((t - lastColorFPStime) > 1000)
+		if((t - lastColorFPSTime) > 1000)
 		{
-			ss<<ColorFrameFPS;
+			ss<<colorFrameFPS;
 			TextFPS= ss.str().c_str();
 			MFC_ecFPSCOLOR->SetWindowText(TextFPS);
-			ColorFrameFPS = 0;
-			lastColorFPStime = timeGetTime();
+			colorFrameFPS = 0;
+			lastColorFPSTime = timeGetTime();
+
+			// Reset both the CString text and the stringstream, so you don't get any crazy value's.
+			TextFPS.Empty();
+			ss.str("");
+
+			ss<<depthFrameFPS;
+			TextFPS = ss.str().c_str();
+			MFC_ecFPSDEPTH->SetWindowText(TextFPS);
+			depthFrameFPS = 0;
 
 			// Reset both the CString text and the stringstream, so you don't get any crazy value's.
 			TextFPS.Empty();
@@ -315,20 +393,54 @@ bool Kinect::gotDepthAlert()
 	texture->LockRect(0, &LockedRect, NULL, 0);
 	if( 0 != LockedRect.Pitch)
 	{
-		DWORD fWidth, fHeight,
+		DWORD fWidth, fHeight;
 
-			NuiImageResolutionToSize( frame.eResolution, fWidth, fHeight);
+		NuiImageResolutionToSize( frame.eResolution, fWidth, fHeight);
 
 		// draw the bits to the bitmap
-		BYTE * rgbrun = NULL;
+		BYTE * rgbrun = depthRGBX;
 		const USHORT * bufferRun = (const USHORT *)LockedRect.pBits;
 
 		// The end pixel is start + width*height. (-1 ?)
 		const USHORT * bufferEnd = bufferRun + (fWidth * fHeight);
 
-		//assert( fWidth * fHeight * xxx <= ARRAYSIZE(depthRGBX);
+		//If the following statement returns a 0 as result, there will be an assertion error that will terminate the program.
+		assert( fWidth * fHeight * bytesPerPixel <= ARRAYSIZE(depthRGBX) );
 
+		while( bufferRun < bufferEnd)
+		{
+			USHORT depth = *bufferRun;
+			USHORT realdepth = NuiDepthPixelToDepth(depth);
+			USHORT player = NuiDepthPixelToPlayerIndex(depth);
+
+			// transform 13-bit depth information into an 8-bit intensity appropriate
+			// for display (we disregard information in most significant bit)
+			BYTE intensity = static_cast<BYTE>(~(realdepth >> 4));					// inverteren?
+
+			// tint the intensity by dividing per-player values.
+			*(rgbrun++) = intensity >> intensityShiftByPlayerB[player];				// mee gaan kloten om te begrijpen.
+			*(rgbrun++) = intensity >> intensityShiftByPlayerG[player];
+			*(rgbrun++) = intensity >> intensityShiftByPlayerR[player];
+
+			// No alpha information, skip the last byte.
+			++rgbrun;
+
+			++bufferRun;
+		}
+
+		drawDepth->GDP( depthRGBX, fWidth * fHeight * bytesPerPixel);
 	}
+	else
+	{
+		processedFrame = false;
+		OutputDebugString(L"Buffer length of received texture is BOGUS.\r\n Motherfucker");
+	}
+
+	texture->UnlockRect(0);
+
+	globalNui->NuiImageStreamReleaseFrame( depthStreamHandle, &frame);
+
+	return processedFrame;
 
 }
 
