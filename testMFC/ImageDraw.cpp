@@ -1,3 +1,5 @@
+//this class is for making the image from a byte array.
+
 #include "ImageDraw.h"
 #include "Collection.h"
 
@@ -91,7 +93,7 @@ bool ImageDraw::Initialize( HWND hWnd, ID2D1Factory * pD2DFactory, int sourceWid
 	return true;
 }
 
-// GDP = Grafical Data Processor.
+// GDP = Graphical Data Processor.
 bool ImageDraw::GDP ( BYTE * image, unsigned long cbImage )
 {
 	// Check for inforrectly sized image data.

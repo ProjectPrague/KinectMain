@@ -6,13 +6,9 @@
 #include "kinect.h"		//for kinect stuff
 #include <map>			//used to map kinect ID's to the dropdown ID's.
 #include <iostream>		// for debugging purposes
-//-----------------------------------------------------------------------------------------
-// Using
-//-------------------------------------------------------------------------------------------
-	//using namespace System;
-	//using namespace System::Collections::Generic;
-//-------------------------------------------------------------------------------------------
-//Globals
+
+//Global variables
+//graphical things
 CEdit * MFC_ecCURVAL; //MFC_ prefix for easy recognizing of visual items
 CEdit * MFC_ecNEWVAL;
 CButton * MFC_bSETVAL;
@@ -20,11 +16,12 @@ CSliderCtrl * MFC_scKINECTANGLE;
 CStatic * MFC_stCURVAL;
 CStatic * MFC_stNEWVAL;
 CComboBox * MFC_cbKinectList;
+CStatic * MFC_ecFPSCOLOR, * MFC_ecDEPTHCOLOR;
+
+//other things
 KinectManager * kinectManager;
 Kinect * kinect;
 std::list<INuiSensor*> nuiList;
-CStatic * MFC_ecFPSCOLOR, * MFC_ecDEPTHCOLOR;
-
 int sliderAngle;
 
 class MAINFORM: public CDialog
@@ -44,7 +41,6 @@ protected:
     virtual BOOL OnInitDialog() 
     {             
 			initializePointers();
-			// maakt kinectmanager object aan.
 			initializeKinect();
 			initializeInterface();
 			CDialog::OnInitDialog();
@@ -69,6 +65,7 @@ protected:
 
 	void initializeInterface()
 	{
+		//this method is used to put the GUI in its starting position.
 		// Stringstream usage to turn the int that is returned by getKinectAngle into a string to use it om SetWindowText.
 		std::stringstream ss;
 		// integer used for counting in for loop for the kinectlist.
@@ -116,13 +113,14 @@ protected:
 	} 
 	void initializeKinect()
 	{
+		//The kinect initializer. Makes sure every thing is ready to be able to work with the kinect.
 		kinectManager = new KinectManager;
 		kinectManager->initialize(this->GetSafeHwnd());
 		nuiList = kinectManager->getGlobalNuiList();
 	}
 	
 //-----------------------------------------------------------------------------------------
-// Event definition.
+// Event definition. These are the methods accessed when the main
 public:
 	
 	void OnNMReleasedcapturekinectangle(NMHDR *pNMHDR, LRESULT *pResult)

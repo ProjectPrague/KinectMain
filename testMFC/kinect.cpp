@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <comdef.h>
 
-//lookups for color tinting based on player index. (? Nog onbekend voor mij.)
+//lookups for color tinting based on player index.
 static const int intensityShiftByPlayerR[] = { 1, 2, 0, 2, 0, 0, 2, 0 };
 static const int intensityShiftByPlayerG[] = { 1, 2, 2, 0, 2, 0, 0, 1 };
 static const int intensityShiftByPlayerB[] = { 1, 0, 2, 2, 0, 2, 0, 2 };
@@ -53,14 +53,7 @@ HRESULT KinectManager::initialize(HWND hWnd)
 
 		// Get the status of the sensor, and if connected, then we can initialize it.
 		hr = nui->NuiStatus();
-		test = S_OK;
-		_com_error error(test);
-		OutputDebugString(L"------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
-		OutputDebugString(error.ErrorMessage());
-		OutputDebugString(L"\n");
-		OutputDebugString(L"------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n");
-		
-
+	
 		if (S_OK == hr)
 		{
 			nuiList.push_front(nui);
@@ -161,7 +154,7 @@ HRESULT Kinect::initialize()
 {
 	HRESULT hr;
 	bool result;
-
+	//the three events that the kinect will throw
 	nextDepthFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
 	nextColorFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
 	nextSkeletonEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
@@ -189,6 +182,7 @@ HRESULT Kinect::initialize()
 	DWORD nuiFlags = NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX | NUI_INITIALIZE_FLAG_USES_SKELETON | NUI_INITIALIZE_FLAG_USES_COLOR;
 
 	hr = globalNui->NuiInitialize(nuiFlags);
+	//If the skeletal part cannot be initialized, just initialize everything else.
 	if ( E_NUI_SKELETAL_ENGINE_BUSY == hr)
 	{
 		nuiFlags = NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX | NUI_INITIALIZE_FLAG_USES_COLOR;
@@ -197,7 +191,7 @@ HRESULT Kinect::initialize()
 
 	if ( FAILED(hr))
 	{
-		// error toevoegen device is in gebruik.
+		// Some error which result in the software being unable to properly initialize the kinect.
 		// of nui init error.
 	}
 
@@ -256,14 +250,13 @@ DWORD WINAPI Kinect::ProcessThread()
 	CStatic * MFC_ecFPSCOLOR, * MFC_ecFPSDEPTH;
 	CWnd cWnd;
 	cWnd.m_hWnd = hWnd;
+	//Initialize the Image vieuwer on the GUI. Because this class does not inherit anything relatied to MFC, we need CWnd::GetDlgItem instead of just GetDlgItem.
+	// (By the way: because the main is a CWnd and 'GetDlgItem()' means the same thing as 'this->GetDlgItem()', main.cpp actually uses the same method.)
 	MFC_ecFPSCOLOR = (CStatic *) cWnd.GetDlgItem(1015);
-	MFC_ecFPSDEPTH = (CStatic *) cWnd.GetDlgItem(1016);
-
-	//Erachter komen en uitleggen waarom bovenstaande wel werkt. Uitleg, Jacko?
+	MFC_ecFPSDEPTH = (CStatic *) cWnd.GetDlgItem(1016);	
 
 	lastColorFPSTime = timeGetTime( );
 	lastDepthFPSTime = timeGetTime( );
-	// blank the skeleton display on startup
 
 	bool continueProcess = true;
 	while ( continueProcess )
@@ -337,26 +330,27 @@ DWORD WINAPI Kinect::ProcessThread()
 	return 0;
 }
 
-// gotColorAlert() handle new color data
+// gotColorAlert() handles new color data
 
 bool Kinect::gotColorAlert()
 {
 	NUI_IMAGE_FRAME frame;
 	bool processedFrame = true;
-
+	//get the next frame from the Kinect
 	HRESULT hr = globalNui->NuiImageStreamGetNextFrame( videoStreamHandle, 0, &frame);
 
 	if (FAILED( hr ) )
 	{
 		return false;
 	}
-
+	//get the data we need: frame now also contains information about the kinect it came from, etc. We do not need that.
 	INuiFrameTexture * texture = frame.pFrameTexture;
 	NUI_LOCKED_RECT lockedRect;
-
+	//lock the data we are going to use, so that other threads cant change it while we are using it.
 	texture->LockRect( 0, &lockedRect, NULL, 0);
 	if( lockedRect.Pitch != 0)
 	{
+		//draw it to the screen.
 		drawColor->GDP( static_cast<BYTE *>(lockedRect.pBits), lockedRect.size);
 	}
 	else
@@ -364,9 +358,9 @@ bool Kinect::gotColorAlert()
 		OutputDebugString( L"Buffer length of received texture is bogus\r\n" );
 		processedFrame = false;
 	}
-
+	//unlock the just used data
 	texture->UnlockRect(0);
-
+	//tell the kinect to remove the frame from its buffer.
 	globalNui->NuiImageStreamReleaseFrame( videoStreamHandle, &frame);
 
 	return processedFrame;
@@ -377,19 +371,20 @@ bool Kinect::gotDepthAlert()
 {
 	NUI_IMAGE_FRAME frame;
 	bool processedFrame = true;
-
+	//get the next depthFrame from the kinect
 	HRESULT hr = globalNui->NuiImageStreamGetNextFrame(
 		depthStreamHandle,
 		0,
 		&frame);
-
+	
 	if ( FAILED(hr) )
 	{
 		return false;
 	}
-
+	//get the data we need: frame now also contains information about the kinect it came from, etc. We do not need that.
 	INuiFrameTexture * texture = frame.pFrameTexture;
 	NUI_LOCKED_RECT LockedRect;
+	//lock the data we are going to use, so that other threads cant change it while we are using it.
 	texture->LockRect(0, &LockedRect, NULL, 0);
 	if( 0 != LockedRect.Pitch)
 	{
@@ -406,7 +401,7 @@ bool Kinect::gotDepthAlert()
 
 		//If the following statement returns a 0 as result, there will be an assertion error that will terminate the program.
 		assert( fWidth * fHeight * bytesPerPixel <= ARRAYSIZE(depthRGBX) );
-
+		//all the checks are now done and everything seems okay. Now we are going to convert distance to color.
 		while( bufferRun < bufferEnd)
 		{
 			USHORT depth = *bufferRun;
@@ -418,7 +413,7 @@ bool Kinect::gotDepthAlert()
 			BYTE intensity = static_cast<BYTE>(~(realdepth >> 4));					// inverteren?
 
 			// tint the intensity by dividing per-player values.
-			*(rgbrun++) = intensity >> intensityShiftByPlayerB[player];				// mee gaan kloten om te begrijpen.
+			*(rgbrun++) = intensity >> intensityShiftByPlayerB[player];				
 			*(rgbrun++) = intensity >> intensityShiftByPlayerG[player];
 			*(rgbrun++) = intensity >> intensityShiftByPlayerR[player];
 
@@ -427,7 +422,7 @@ bool Kinect::gotDepthAlert()
 
 			++bufferRun;
 		}
-
+		//the distance has been recalculated to color and now the ImageDraw Class can make a picture from it.
 		drawDepth->GDP( depthRGBX, fWidth * fHeight * bytesPerPixel);
 	}
 	else
@@ -435,9 +430,9 @@ bool Kinect::gotDepthAlert()
 		processedFrame = false;
 		OutputDebugString(L"Buffer length of received texture is BOGUS.\r\n Motherfucker");
 	}
-
+	//unlock the just used data
 	texture->UnlockRect(0);
-
+	//tell the kinect to remove the frame from its buffer.
 	globalNui->NuiImageStreamReleaseFrame( depthStreamHandle, &frame);
 
 	return processedFrame;
@@ -454,7 +449,7 @@ int Kinect::getKinectAngle()
 
 	if(FAILED(hr))
 	{
-		return hr;
+		return hr; //this should be fixed, It should not return a errorcode as if it is the angle, It should state clear that there has been an error.
 	}
 
 	return (int)longAngle;
@@ -481,7 +476,7 @@ void Kinect::UpdateDepthFlag( DWORD flag, bool value)
 	}
 }
 
-//Sets the angle of the specified kinect.
+//Sets the angle of the specified kinect. 
 void Kinect::setKinectAngle(int angle)
 {
 	HRESULT hr;
@@ -490,7 +485,7 @@ void Kinect::setKinectAngle(int angle)
 
 	if(FAILED(hr))
 	{
-
+		//again, probebly should do something to report there has been an error.
 	}
 
 }
