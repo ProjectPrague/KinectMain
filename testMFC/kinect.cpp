@@ -12,8 +12,13 @@ static const int intensityShiftByPlayerR[] = { 1, 2, 0, 2, 0, 0, 2, 0 };
 static const int intensityShiftByPlayerG[] = { 1, 2, 2, 0, 2, 0, 0, 1 };
 static const int intensityShiftByPlayerB[] = { 1, 0, 2, 2, 0, 2, 0, 2 };
 
-const int bytesPerPixel = 4;
+static const float jointThickness = 3.0f;
+static const float trackedBoneThickness = 6.0f;
+static const float inferredBoneThickness = 1.0f;
 
+const int bytesPerPixel = 4;
+const int screenWidth = 320;
+const int screenHeight = 240;
 
 KinectManager::KinectManager()
 {
@@ -29,7 +34,7 @@ HRESULT KinectManager::initialize(HWND hWnd)
 {
 	INuiSensor * nui;
 	int nuiCount = 0;
-	HRESULT hr, test;
+	HRESULT hr;
 	this->hwnd = hWnd;
 
 
@@ -53,7 +58,7 @@ HRESULT KinectManager::initialize(HWND hWnd)
 
 		// Get the status of the sensor, and if connected, then we can initialize it.
 		hr = nui->NuiStatus();
-	
+
 		if (S_OK == hr)
 		{
 			nuiList.push_front(nui);
@@ -139,6 +144,7 @@ Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 	// da creator.
 	this->hWnd = hwnd;
 	this->globalNui = globalNui;
+	skeletonTrackingFlags = NUI_SKELETON_TRACKING_FLAG_ENABLE_IN_NEAR_RANGE;
 }
 
 Kinect::~Kinect()
@@ -160,6 +166,7 @@ HRESULT Kinect::initialize()
 	nextSkeletonEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
 
 	// recource ensurement? D2D resources.
+	EnsureDirect2DResources();
 
 	//init Direct2D
 	D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &d2DFactory);
@@ -195,6 +202,15 @@ HRESULT Kinect::initialize()
 		// of nui init error.
 	}
 
+	if ( HasSkeletalEngine( globalNui ) )
+	{
+		hr = globalNui->NuiSkeletonTrackingEnable( nextSkeletonEvent, skeletonTrackingFlags);
+		if( FAILED(hr))
+		{
+			// Error about skeleton tracking.
+		}
+	}
+
 	// skeletal viewer error
 
 	//Initialize the color stream
@@ -217,7 +233,7 @@ HRESULT Kinect::initialize()
 		nextDepthFrameEvent,
 		&depthStreamHandle );
 
-	// error toevoegen voor de depth stream
+	// error toevoegen voor de depth stream 
 
 
 	// Start the processing thread
@@ -239,8 +255,8 @@ DWORD WINAPI Kinect::ProcessThread( LPVOID param )		// LPVOID is a VOID LONG POI
 DWORD WINAPI Kinect::ProcessThread()
 {
 	//numEvents is the number of events, handleEvents is an Array of all the events being handled.
-	const int numEvents = 3;
-	HANDLE handleEvents[numEvents] = { treadNuiProcessStop, nextColorFrameEvent, nextDepthFrameEvent };
+	const int numEvents = 4;
+	HANDLE handleEvents[numEvents] = { treadNuiProcessStop, nextColorFrameEvent, nextDepthFrameEvent, nextSkeletonEvent };
 	std::stringstream ss;
 	int eventIdx, colorFrameFPS = 0, depthFrameFPS = 0;
 	DWORD t, lastColorFPSTime, lastDepthFPSTime;
@@ -255,8 +271,11 @@ DWORD WINAPI Kinect::ProcessThread()
 	MFC_ecFPSCOLOR = (CStatic *) cWnd.GetDlgItem(1015);
 	MFC_ecFPSDEPTH = (CStatic *) cWnd.GetDlgItem(1016);	
 
-	lastColorFPSTime = timeGetTime( );
-	lastDepthFPSTime = timeGetTime( );
+	lastColorFPSTime	= timeGetTime( );
+	lastDepthFPSTime	= timeGetTime( );
+
+	//blank the skeleton display when started.
+	lastSkeletonFoundTime = 0;
 
 	bool continueProcess = true;
 	while ( continueProcess )
@@ -301,6 +320,13 @@ DWORD WINAPI Kinect::ProcessThread()
 			}
 		}
 
+		if (WAIT_OBJECT_0 == WaitForSingleObject( nextSkeletonEvent, 0))
+		{
+			if (gotSkeletonAlert() )
+			{
+			}
+		}
+
 		// fps counter for the color stream.
 		// compare first frametime with the current time, if more then 1000 passed,
 		// one second passed.
@@ -325,6 +351,15 @@ DWORD WINAPI Kinect::ProcessThread()
 			// Reset both the CString text and the stringstream, so you don't get any crazy value's.
 			TextFPS.Empty();
 			ss.str("");
+
+			if( (t - lastSkeletonFoundTime) > 300)
+			{
+				if (!screenBlanked)
+				{
+					blankSkeletonScreen();
+					screenBlanked = true;
+				}
+			}
 		}
 	}
 	return 0;
@@ -366,6 +401,201 @@ bool Kinect::gotColorAlert()
 	return processedFrame;
 }
 
+void Kinect::blankSkeletonScreen( )
+{
+	renderTarget->BeginDraw( );
+	renderTarget->Clear( );
+	renderTarget->EndDraw( );
+}
+
+void Kinect::DrawBone( const NUI_SKELETON_DATA & skelly, NUI_SKELETON_POSITION_INDEX bone0, NUI_SKELETON_POSITION_INDEX bone1)
+{
+	NUI_SKELETON_POSITION_TRACKING_STATE bone0State = skelly.eSkeletonPositionTrackingState[bone0];
+	NUI_SKELETON_POSITION_TRACKING_STATE bone1State = skelly.eSkeletonPositionTrackingState[bone1];
+
+	// If we can't find either joints, exit!
+	if (bone0State == NUI_SKELETON_POSITION_NOT_TRACKED || bone1State == NUI_SKELETON_POSITION_NOT_TRACKED )
+	{
+		return;
+	}
+
+	// if both points are inferred, exit.
+	if ( bone0State == NUI_SKELETON_POSITION_INFERRED && bone1State == NUI_SKELETON_POSITION_INFERRED )
+	{
+		return;
+	}
+
+	// Assume all drawn bones are inferred unless both joints are tracked.
+	if (bone0State == NUI_SKELETON_POSITION_TRACKED && bone1State == NUI_SKELETON_POSITION_TRACKED )
+	{
+		renderTarget->DrawLine( points[bone0], points[bone1], brushBoneTracked, trackedBoneThickness);
+	}
+	else
+	{
+		renderTarget->DrawLine( points[bone0], points[bone1], brushBoneInferred, inferredBoneThickness);
+	}
+}
+
+void Kinect::DrawSkeleton( const NUI_SKELETON_DATA & skelly, int windowWidth, int windowHeight)
+{
+	int i;
+
+	for ( i = 0; i < NUI_SKELETON_POSITION_COUNT; i++)
+	{
+		points[i] = SkeletonScreen( skelly.SkeletonPositions[i], windowWidth, windowHeight );
+	}
+
+	// Rendering part
+	// Torso
+    DrawBone( skelly, NUI_SKELETON_POSITION_HEAD, NUI_SKELETON_POSITION_SHOULDER_CENTER );
+    DrawBone( skelly, NUI_SKELETON_POSITION_SHOULDER_CENTER, NUI_SKELETON_POSITION_SHOULDER_LEFT );
+    DrawBone( skelly, NUI_SKELETON_POSITION_SHOULDER_CENTER, NUI_SKELETON_POSITION_SHOULDER_RIGHT );
+    DrawBone( skelly, NUI_SKELETON_POSITION_SHOULDER_CENTER, NUI_SKELETON_POSITION_SPINE );
+    DrawBone( skelly, NUI_SKELETON_POSITION_SPINE, NUI_SKELETON_POSITION_HIP_CENTER );
+    DrawBone( skelly, NUI_SKELETON_POSITION_HIP_CENTER, NUI_SKELETON_POSITION_HIP_LEFT );
+    DrawBone( skelly, NUI_SKELETON_POSITION_HIP_CENTER, NUI_SKELETON_POSITION_HIP_RIGHT );
+
+    // Left Arm
+    DrawBone( skelly, NUI_SKELETON_POSITION_SHOULDER_LEFT, NUI_SKELETON_POSITION_ELBOW_LEFT );
+    DrawBone( skelly, NUI_SKELETON_POSITION_ELBOW_LEFT, NUI_SKELETON_POSITION_WRIST_LEFT );
+    DrawBone( skelly, NUI_SKELETON_POSITION_WRIST_LEFT, NUI_SKELETON_POSITION_HAND_LEFT );
+
+    // Right Arm
+    DrawBone( skelly, NUI_SKELETON_POSITION_SHOULDER_RIGHT, NUI_SKELETON_POSITION_ELBOW_RIGHT );
+    DrawBone( skelly, NUI_SKELETON_POSITION_ELBOW_RIGHT, NUI_SKELETON_POSITION_WRIST_RIGHT );
+    DrawBone( skelly, NUI_SKELETON_POSITION_WRIST_RIGHT, NUI_SKELETON_POSITION_HAND_RIGHT );
+
+    // Left Leg
+    DrawBone( skelly, NUI_SKELETON_POSITION_HIP_LEFT, NUI_SKELETON_POSITION_KNEE_LEFT );
+    DrawBone( skelly, NUI_SKELETON_POSITION_KNEE_LEFT, NUI_SKELETON_POSITION_ANKLE_LEFT );
+    DrawBone( skelly, NUI_SKELETON_POSITION_ANKLE_LEFT, NUI_SKELETON_POSITION_FOOT_LEFT );
+
+    // Right Leg
+    DrawBone( skelly, NUI_SKELETON_POSITION_HIP_RIGHT, NUI_SKELETON_POSITION_KNEE_RIGHT );
+    DrawBone( skelly, NUI_SKELETON_POSITION_KNEE_RIGHT, NUI_SKELETON_POSITION_ANKLE_RIGHT );
+    DrawBone( skelly, NUI_SKELETON_POSITION_ANKLE_RIGHT, NUI_SKELETON_POSITION_FOOT_RIGHT );
+
+	// Draw in different colors 
+	for( i = 0; i < NUI_SKELETON_POSITION_COUNT; i++)
+	{
+		D2D1_ELLIPSE ellipse = D2D1::Ellipse( points[i], jointThickness, jointThickness);
+
+		if( skelly.eSkeletonPositionTrackingState[i] == NUI_SKELETON_POSITION_INFERRED )
+		{
+			renderTarget->DrawEllipse(ellipse, brushJointInferred);
+		}
+		else if( skelly.eSkeletonPositionTrackingState[i] == NUI_SKELETON_POSITION_TRACKED )
+		{
+			renderTarget->DrawEllipse(ellipse, brushBoneTracked);
+		}
+
+	}
+}
+
+void Kinect::UpdateSkelly( const NUI_SKELETON_FRAME &skelly )
+{
+	DWORD nearestIDs[2] = { 0, 0};
+	USHORT nearestDepth[2] = { NUI_IMAGE_DEPTH_MAXIMUM, NUI_IMAGE_DEPTH_MAXIMUM };
+
+	// Clean old sticky skeleton IDs, if the user has left the frame, etc.
+	bool sticky0Found = false;
+	bool sticky1Found = false;
+	for ( int i = 0; i < NUI_SKELETON_COUNT; i++)
+	{
+		NUI_SKELETON_TRACKING_STATE trackState = skelly.SkeletonData[i].eTrackingState;
+
+		if (trackState == NUI_SKELETON_TRACKED || trackState == NUI_SKELETON_POSITION_ONLY )
+		{
+			if ( skelly.SkeletonData[i].dwTrackingID == stickySkeletonId[0] )
+			{
+				sticky0Found = true;
+			}
+			else if ( skelly.SkeletonData[i].dwTrackingID == stickySkeletonId[1] )
+			{
+				sticky1Found = true;
+			}
+		}
+	}
+
+	if (!sticky0Found && sticky1Found )
+	{
+		stickySkeletonId[0] = stickySkeletonId[1];
+		stickySkeletonId[1] = 0;
+	}
+	else if (!sticky0Found )
+	{
+		stickySkeletonId[0] = 0;
+	}
+	else if (!sticky1Found )
+	{
+		stickySkeletonId[1] = 0;
+	}
+
+	// calculate the nearest and sticky skeletons.
+	for( int i = 0; i < NUI_SKELETON_COUNT; i++)
+	{
+		NUI_SKELETON_TRACKING_STATE trackState = skelly.SkeletonData[i].eTrackingState;
+
+		if( trackState == NUI_SKELETON_TRACKED || trackState == NUI_SKELETON_POSITION_ONLY )
+		{
+			// Save skeleton ID for sticky mode if there is none currently saved.
+			if ( 0 == stickySkeletonId[0] && stickySkeletonId[1] != skelly.SkeletonData[i].dwTrackingID )
+			{
+				stickySkeletonId[0] = skelly.SkeletonData[i].dwTrackingID;
+			}
+			else if ( 0 == stickySkeletonId[1] && stickySkeletonId[0] != skelly.SkeletonData[i].dwTrackingID )
+			{
+				stickySkeletonId[1] = skelly.SkeletonData[i].dwTrackingID;
+			}
+
+			LONG x, y;
+			USHORT depth;
+
+			NuiTransformSkeletonToDepthImage ( skelly.SkeletonData[i].Position, &x, &y, &depth);
+
+			if (depth < nearestDepth[0] )
+			{
+				nearestDepth[1] = nearestDepth[0];
+				nearestIDs[1] = skelly.SkeletonData[i].dwTrackingID;
+
+				nearestDepth[0] = depth;
+				nearestIDs[0] = skelly.SkeletonData[i].dwTrackingID;
+			}
+			else if ( depth < nearestDepth[1] )
+			{
+				nearestDepth[1] = depth;
+				nearestIDs[1] = skelly.SkeletonData[i].dwTrackingID;
+			}
+		}
+	}
+
+	/*
+	
+    if ( SV_TRACKED_SKELETONS_NEAREST1 == m_TrackedSkeletons || SV_TRACKED_SKELETONS_NEAREST2 == m_TrackedSkeletons )
+    {
+        // Only track the closest single skeleton in nearest 1 mode
+        if ( SV_TRACKED_SKELETONS_NEAREST1 == m_TrackedSkeletons )
+        {
+            nearestIDs[1] = 0;
+        }
+        m_pNuiSensor->NuiSkeletonSetTrackedSkeletons(nearestIDs);
+    }
+
+    if ( SV_TRACKED_SKELETONS_STICKY1 == m_TrackedSkeletons || SV_TRACKED_SKELETONS_STICKY2 == m_TrackedSkeletons )
+    {
+        DWORD stickyIDs[2] = { m_StickySkeletonIds[0], m_StickySkeletonIds[1] };
+
+        // Only track a single skeleton in sticky 1 mode
+        if ( SV_TRACKED_SKELETONS_STICKY1 == m_TrackedSkeletons )
+        {
+            stickyIDs[1] = 0;
+        }
+        m_pNuiSensor->NuiSkeletonSetTrackedSkeletons(stickyIDs);
+    }
+	*/
+
+}
+
 // Handle new depth data.
 bool Kinect::gotDepthAlert()
 {
@@ -376,7 +606,7 @@ bool Kinect::gotDepthAlert()
 		depthStreamHandle,
 		0,
 		&frame);
-	
+
 	if ( FAILED(hr) )
 	{
 		return false;
@@ -439,6 +669,95 @@ bool Kinect::gotDepthAlert()
 
 }
 
+D2D1_POINT_2F Kinect::SkeletonScreen( Vector4 skeletonPoint, int width, int height )
+{
+	LONG x, y;
+	USHORT depth;
+
+    // calculate the skeleton's position on the screen
+    // NuiTransformSkeletonToDepthImage returns coordinates in NUI_IMAGE_RESOLUTION_320x240 space
+	NuiTransformSkeletonToDepthImage( skeletonPoint, &x, &y, &depth);
+
+	float screenPointX = static_cast<float>(x * width) / screenWidth;
+	float screenPointY = static_cast<float>(y * height) / screenHeight;
+
+	return D2D1::Point2F(screenPointX, screenPointY);
+}
+
+bool Kinect::gotSkeletonAlert()
+{
+	NUI_SKELETON_FRAME sFrame = {0};
+	
+	bool foundSkeleton = false;
+
+	if ( SUCCEEDED(globalNui->NuiSkeletonGetNextFrame( 0, &sFrame)))
+	{
+		for ( int i = 0 ; i < NUI_SKELETON_COUNT ; i++)
+		{
+			NUI_SKELETON_TRACKING_STATE trackState = sFrame.SkeletonData[i].eTrackingState;
+
+			if ( trackState == NUI_SKELETON_TRACKED || trackState == NUI_SKELETON_POSITION_ONLY )
+			{
+				foundSkeleton = true;
+			}
+		}
+	}
+
+	// no skeletons..
+	if (!foundSkeleton)
+	{
+		return true;
+	}
+
+	// smooth out the data (?)
+	HRESULT hr = globalNui->NuiTransformSmooth(&sFrame, NULL); // change the parameters?
+	if ( FAILED(hr) )
+	{
+		return false;
+	}
+
+	//We found a skeleton, restart the timer.
+	screenBlanked = false;
+	lastSkeletonFoundTime = timeGetTime( );
+
+	// Ensure Direct2D is ready to go
+	hr = EnsureDirect2DResources();
+
+	renderTarget->BeginDraw( );
+	renderTarget->Clear( );
+
+	RECT rct;
+	GetClientRect( GetDlgItem( hWnd, 1012 ), &rct);
+	int width = rct.right;
+	int height = rct.bottom;
+
+	for ( int i = 0; i < NUI_SKELETON_COUNT; i++)
+	{
+		NUI_SKELETON_TRACKING_STATE trackState = sFrame.SkeletonData[i].eTrackingState;
+
+		if ( trackState == NUI_SKELETON_TRACKED )
+		{
+			// We are tracking the skeleton, we need to draw it.
+			DrawSkeleton( sFrame.SkeletonData[i], width, height);
+		}
+		else if ( trackState == NUI_SKELETON_POSITION_ONLY)
+		{
+			// We have only recieved the point that is the center of the skeleton
+			// draw that point.
+			D2D1_ELLIPSE ellipse = D2D1::Ellipse(
+                SkeletonScreen( sFrame.SkeletonData[i].Position, width, height ),
+                jointThickness,
+                jointThickness
+                );
+			renderTarget->DrawEllipse(ellipse, brushJointTracked);
+		}
+	}
+
+	hr = renderTarget->EndDraw( );
+
+	UpdateSkelly( sFrame );
+}
+
 //Get the angle of the current chosen Kinect.
 int Kinect::getKinectAngle()
 {
@@ -474,6 +793,47 @@ void Kinect::UpdateDepthFlag( DWORD flag, bool value)
 		depthStreamFlags = newFlag;
 		globalNui->NuiImageStreamSetImageFrameFlags( depthStreamHandle, depthStreamFlags);
 	}
+}
+
+HRESULT Kinect::EnsureDirect2DResources()
+{
+	HRESULT hr = S_OK;
+
+	if (!renderTarget)
+	{
+		RECT rc;
+		GetWindowRect( GetDlgItem( hWnd, 1012 ), &rc);
+
+		int width = rc.right - rc.left;
+		int height = rc.bottom - rc.top;
+		D2D1_SIZE_U size = D2D1::SizeU( width, height);
+		D2D1_RENDER_TARGET_PROPERTIES rtProp = D2D1::RenderTargetProperties();
+		rtProp.pixelFormat = D2D1::PixelFormat( DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE);
+		rtProp.usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE;
+
+		hr = d2DFactory->CreateHwndRenderTarget(
+			rtProp,
+			D2D1::HwndRenderTargetProperties(GetDlgItem( hWnd, 1012 ), size),
+			&renderTarget
+			);
+		if ( FAILED(hr))
+		{
+			// error code, yo.
+		}
+
+		 //light green
+        renderTarget->CreateSolidColorBrush( D2D1::ColorF( 68, 192, 68 ), &brushJointTracked );
+
+        //yellow
+        renderTarget->CreateSolidColorBrush( D2D1::ColorF( 255, 255, 0 ), &brushJointInferred );
+
+        //green
+        renderTarget->CreateSolidColorBrush( D2D1::ColorF( 0, 128, 0 ), &brushBoneTracked );
+
+        //gray
+        renderTarget->CreateSolidColorBrush( D2D1::ColorF( 128, 128, 128 ), &brushBoneInferred );
+	}
+	return hr;
 }
 
 //Sets the angle of the specified kinect. 

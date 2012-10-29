@@ -19,16 +19,31 @@ public:
 	HWND hWnd;
 
 private:
-	//Handles for the specific data.
-	bool gotColorAlert();
-	bool gotDepthAlert();
+
+	HRESULT EnsureDirect2DResources();
 
 	// Global NuiSensor.
 	INuiSensor* globalNui;
+	
+	//Handles for the specific data.
+	bool gotColorAlert();
+	bool gotDepthAlert();
+	bool gotSkeletonAlert();
 
+	// Blanks the skeletonscreen when there is no skeleton found.
+	void blankSkeletonScreen( );
+
+	//Draws the skeleton.. (Dôh.)
+	void DrawSkeleton( const NUI_SKELETON_DATA & skel, int windowWidth, int windowHeight);
+	
 	HRESULT D2DResources();
 
 	void UpdateDepthFlag( DWORD flag, bool value);
+
+	D2D1_POINT_2F Kinect::SkeletonScreen( Vector4 skeletonPoint, int width, int height );
+	void UpdateSkelly( const NUI_SKELETON_FRAME &skelly );
+
+	void DrawBone( const NUI_SKELETON_DATA & skelly, NUI_SKELETON_POSITION_INDEX bone0, NUI_SKELETON_POSITION_INDEX bone1);
 
 	// Thread to handle Kinect processing, calls class instance thread processor.
 	static DWORD WINAPI ProcessThread( LPVOID pParam );
@@ -60,16 +75,15 @@ private:
 	HANDLE        videoStreamHandle;
 
 	BYTE		depthRGBX[640*480*4];
-	//  DWORD       lastSkeletonFoundTime;
-	//  bool        screenBlanked;
+	DWORD       lastSkeletonFoundTime;
+	bool        screenBlanked;
 	//  int         depthFramesTotal;
 	//  int			lastDepthFramesTotal;
 	//  int			trackedSkeletons;
-	//  DWORD		skeletonTrackingFlags;
+	DWORD		skeletonTrackingFlags;
 	DWORD		depthStreamFlags;
 
-
-
+	 DWORD		stickySkeletonId[NUI_SKELETON_MAX_TRACKED_COUNT];
 };
 
 
