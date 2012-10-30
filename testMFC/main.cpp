@@ -71,6 +71,8 @@ protected:
 		// integer used for counting in for loop for the kinectlist.
 		int i = 0;
 
+
+
 		// need to add comments here.
 		for (std::list<INuiSensor*>::const_iterator it = nuiList.begin();it != nuiList.end();++it,i++)
 		{
@@ -95,14 +97,14 @@ protected:
 
 		ss << kinect->getKinectAngle();
 		CString text = ss.str().c_str();
-
 		//Set the interface as you want it on your first run
 		//You need an LPCTSTR for a SetWindowText. For this kind of string use, just prefix an L. For normal strings: convert to CString: CString s(str.c_str())
 		MFC_stCURVAL->SetWindowText(L"Current Kinect Angle");
 		MFC_stNEWVAL->SetWindowText(L"New Kinect Angle");
 		MFC_ecCURVAL->SetWindowText(text);
-		MFC_ecNEWVAL->SetWindowText(L"0");
-		MFC_scKINECTANGLE->SetPos(0);
+		MFC_ecNEWVAL->SetWindowText(text);
+		MFC_scKINECTANGLE->SetRange(-27, 27, TRUE);
+		MFC_scKINECTANGLE->SetPos(kinect->getKinectAngle()*-1);
 		MFC_scKINECTANGLE->SetRange(-27, 27, TRUE);
 
 		CFont * cf = new CFont();
