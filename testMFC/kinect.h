@@ -5,6 +5,7 @@
 #include <list>
 #include "ImageDraw.h"
 #include "resource.h"
+#include "Collection.h"
 
 
 class Kinect
@@ -21,6 +22,7 @@ public:
 private:
 
 	HRESULT EnsureDirect2DResources();
+	void unInit();
 
 	// Global NuiSensor.
 	INuiSensor* globalNui;

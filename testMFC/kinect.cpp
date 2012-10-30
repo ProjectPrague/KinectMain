@@ -141,6 +141,7 @@ void CALLBACK KinectManager::OnSensorStatusChanged( HRESULT hr, const OLECHAR* i
 
 Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 {
+	unInit();
 	// da creator.
 	this->hWnd = hwnd;
 	this->globalNui = globalNui;
@@ -149,6 +150,7 @@ Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 
 Kinect::~Kinect()
 {
+	unInit();
 	//da destructor
 	globalNui->NuiShutdown();
 
@@ -160,6 +162,10 @@ HRESULT Kinect::initialize()
 {
 	HRESULT hr;
 	bool result;
+
+	//init Direct2D
+	D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &d2DFactory);
+
 	//the three events that the kinect will throw
 	nextDepthFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
 	nextColorFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
@@ -167,9 +173,6 @@ HRESULT Kinect::initialize()
 
 	// recource ensurement? D2D resources.
 	EnsureDirect2DResources();
-
-	//init Direct2D
-	D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &d2DFactory);
 
 	drawDepth = new ImageDraw();
 	result = drawDepth->Initialize( GetDlgItem( hWnd, 1011), d2DFactory, 320, 240, 320 * 4);
@@ -241,6 +244,34 @@ HRESULT Kinect::initialize()
 	treadNuiProcess = CreateThread ( NULL, 0, ProcessThread, this, 0, NULL);
 
 	return hr;
+}
+
+void Kinect::unInit()
+{
+	//SafeRelease( globalNui );
+
+	renderTarget = NULL;
+	brushJointTracked = NULL;
+	brushJointInferred = NULL;
+	brushBoneTracked = NULL;
+	brushBoneInferred = NULL;
+	ZeroMemory(points,sizeof(points));
+
+	nextDepthFrameEvent = NULL;
+	nextColorFrameEvent = NULL;
+	nextSkeletonEvent = NULL;
+	depthStreamHandle = NULL;
+	videoStreamHandle = NULL;
+	//treadNuiProcess = NULL;
+	//treadNuiProcessStop = NULL;
+	lastSkeletonFoundTime = 0;
+	screenBlanked = false;
+	drawDepth = NULL;
+	drawColor = NULL;
+	//trackedSkeletons = 0;
+	skeletonTrackingFlags = NUI_SKELETON_TRACKING_FLAG_ENABLE_IN_NEAR_RANGE;
+	depthStreamFlags = 0;
+	ZeroMemory(stickySkeletonId,sizeof(stickySkeletonId));
 }
 
 // Thread to handle Kinect processing, calls class instance thread processor.
@@ -447,33 +478,33 @@ void Kinect::DrawSkeleton( const NUI_SKELETON_DATA & skelly, int windowWidth, in
 
 	// Rendering part
 	// Torso
-    DrawBone( skelly, NUI_SKELETON_POSITION_HEAD, NUI_SKELETON_POSITION_SHOULDER_CENTER );
-    DrawBone( skelly, NUI_SKELETON_POSITION_SHOULDER_CENTER, NUI_SKELETON_POSITION_SHOULDER_LEFT );
-    DrawBone( skelly, NUI_SKELETON_POSITION_SHOULDER_CENTER, NUI_SKELETON_POSITION_SHOULDER_RIGHT );
-    DrawBone( skelly, NUI_SKELETON_POSITION_SHOULDER_CENTER, NUI_SKELETON_POSITION_SPINE );
-    DrawBone( skelly, NUI_SKELETON_POSITION_SPINE, NUI_SKELETON_POSITION_HIP_CENTER );
-    DrawBone( skelly, NUI_SKELETON_POSITION_HIP_CENTER, NUI_SKELETON_POSITION_HIP_LEFT );
-    DrawBone( skelly, NUI_SKELETON_POSITION_HIP_CENTER, NUI_SKELETON_POSITION_HIP_RIGHT );
+	DrawBone( skelly, NUI_SKELETON_POSITION_HEAD, NUI_SKELETON_POSITION_SHOULDER_CENTER );
+	DrawBone( skelly, NUI_SKELETON_POSITION_SHOULDER_CENTER, NUI_SKELETON_POSITION_SHOULDER_LEFT );
+	DrawBone( skelly, NUI_SKELETON_POSITION_SHOULDER_CENTER, NUI_SKELETON_POSITION_SHOULDER_RIGHT );
+	DrawBone( skelly, NUI_SKELETON_POSITION_SHOULDER_CENTER, NUI_SKELETON_POSITION_SPINE );
+	DrawBone( skelly, NUI_SKELETON_POSITION_SPINE, NUI_SKELETON_POSITION_HIP_CENTER );
+	DrawBone( skelly, NUI_SKELETON_POSITION_HIP_CENTER, NUI_SKELETON_POSITION_HIP_LEFT );
+	DrawBone( skelly, NUI_SKELETON_POSITION_HIP_CENTER, NUI_SKELETON_POSITION_HIP_RIGHT );
 
-    // Left Arm
-    DrawBone( skelly, NUI_SKELETON_POSITION_SHOULDER_LEFT, NUI_SKELETON_POSITION_ELBOW_LEFT );
-    DrawBone( skelly, NUI_SKELETON_POSITION_ELBOW_LEFT, NUI_SKELETON_POSITION_WRIST_LEFT );
-    DrawBone( skelly, NUI_SKELETON_POSITION_WRIST_LEFT, NUI_SKELETON_POSITION_HAND_LEFT );
+	// Left Arm
+	DrawBone( skelly, NUI_SKELETON_POSITION_SHOULDER_LEFT, NUI_SKELETON_POSITION_ELBOW_LEFT );
+	DrawBone( skelly, NUI_SKELETON_POSITION_ELBOW_LEFT, NUI_SKELETON_POSITION_WRIST_LEFT );
+	DrawBone( skelly, NUI_SKELETON_POSITION_WRIST_LEFT, NUI_SKELETON_POSITION_HAND_LEFT );
 
-    // Right Arm
-    DrawBone( skelly, NUI_SKELETON_POSITION_SHOULDER_RIGHT, NUI_SKELETON_POSITION_ELBOW_RIGHT );
-    DrawBone( skelly, NUI_SKELETON_POSITION_ELBOW_RIGHT, NUI_SKELETON_POSITION_WRIST_RIGHT );
-    DrawBone( skelly, NUI_SKELETON_POSITION_WRIST_RIGHT, NUI_SKELETON_POSITION_HAND_RIGHT );
+	// Right Arm
+	DrawBone( skelly, NUI_SKELETON_POSITION_SHOULDER_RIGHT, NUI_SKELETON_POSITION_ELBOW_RIGHT );
+	DrawBone( skelly, NUI_SKELETON_POSITION_ELBOW_RIGHT, NUI_SKELETON_POSITION_WRIST_RIGHT );
+	DrawBone( skelly, NUI_SKELETON_POSITION_WRIST_RIGHT, NUI_SKELETON_POSITION_HAND_RIGHT );
 
-    // Left Leg
-    DrawBone( skelly, NUI_SKELETON_POSITION_HIP_LEFT, NUI_SKELETON_POSITION_KNEE_LEFT );
-    DrawBone( skelly, NUI_SKELETON_POSITION_KNEE_LEFT, NUI_SKELETON_POSITION_ANKLE_LEFT );
-    DrawBone( skelly, NUI_SKELETON_POSITION_ANKLE_LEFT, NUI_SKELETON_POSITION_FOOT_LEFT );
+	// Left Leg
+	DrawBone( skelly, NUI_SKELETON_POSITION_HIP_LEFT, NUI_SKELETON_POSITION_KNEE_LEFT );
+	DrawBone( skelly, NUI_SKELETON_POSITION_KNEE_LEFT, NUI_SKELETON_POSITION_ANKLE_LEFT );
+	DrawBone( skelly, NUI_SKELETON_POSITION_ANKLE_LEFT, NUI_SKELETON_POSITION_FOOT_LEFT );
 
-    // Right Leg
-    DrawBone( skelly, NUI_SKELETON_POSITION_HIP_RIGHT, NUI_SKELETON_POSITION_KNEE_RIGHT );
-    DrawBone( skelly, NUI_SKELETON_POSITION_KNEE_RIGHT, NUI_SKELETON_POSITION_ANKLE_RIGHT );
-    DrawBone( skelly, NUI_SKELETON_POSITION_ANKLE_RIGHT, NUI_SKELETON_POSITION_FOOT_RIGHT );
+	// Right Leg
+	DrawBone( skelly, NUI_SKELETON_POSITION_HIP_RIGHT, NUI_SKELETON_POSITION_KNEE_RIGHT );
+	DrawBone( skelly, NUI_SKELETON_POSITION_KNEE_RIGHT, NUI_SKELETON_POSITION_ANKLE_RIGHT );
+	DrawBone( skelly, NUI_SKELETON_POSITION_ANKLE_RIGHT, NUI_SKELETON_POSITION_FOOT_RIGHT );
 
 	// Draw in different colors 
 	for( i = 0; i < NUI_SKELETON_POSITION_COUNT; i++)
@@ -570,28 +601,28 @@ void Kinect::UpdateSkelly( const NUI_SKELETON_FRAME &skelly )
 	}
 
 	/*
-	
-    if ( SV_TRACKED_SKELETONS_NEAREST1 == m_TrackedSkeletons || SV_TRACKED_SKELETONS_NEAREST2 == m_TrackedSkeletons )
-    {
-        // Only track the closest single skeleton in nearest 1 mode
-        if ( SV_TRACKED_SKELETONS_NEAREST1 == m_TrackedSkeletons )
-        {
-            nearestIDs[1] = 0;
-        }
-        m_pNuiSensor->NuiSkeletonSetTrackedSkeletons(nearestIDs);
-    }
 
-    if ( SV_TRACKED_SKELETONS_STICKY1 == m_TrackedSkeletons || SV_TRACKED_SKELETONS_STICKY2 == m_TrackedSkeletons )
-    {
-        DWORD stickyIDs[2] = { m_StickySkeletonIds[0], m_StickySkeletonIds[1] };
+	if ( SV_TRACKED_SKELETONS_NEAREST1 == m_TrackedSkeletons || SV_TRACKED_SKELETONS_NEAREST2 == m_TrackedSkeletons )
+	{
+	// Only track the closest single skeleton in nearest 1 mode
+	if ( SV_TRACKED_SKELETONS_NEAREST1 == m_TrackedSkeletons )
+	{
+	nearestIDs[1] = 0;
+	}
+	m_pNuiSensor->NuiSkeletonSetTrackedSkeletons(nearestIDs);
+	}
 
-        // Only track a single skeleton in sticky 1 mode
-        if ( SV_TRACKED_SKELETONS_STICKY1 == m_TrackedSkeletons )
-        {
-            stickyIDs[1] = 0;
-        }
-        m_pNuiSensor->NuiSkeletonSetTrackedSkeletons(stickyIDs);
-    }
+	if ( SV_TRACKED_SKELETONS_STICKY1 == m_TrackedSkeletons || SV_TRACKED_SKELETONS_STICKY2 == m_TrackedSkeletons )
+	{
+	DWORD stickyIDs[2] = { m_StickySkeletonIds[0], m_StickySkeletonIds[1] };
+
+	// Only track a single skeleton in sticky 1 mode
+	if ( SV_TRACKED_SKELETONS_STICKY1 == m_TrackedSkeletons )
+	{
+	stickyIDs[1] = 0;
+	}
+	m_pNuiSensor->NuiSkeletonSetTrackedSkeletons(stickyIDs);
+	}
 	*/
 
 }
@@ -674,8 +705,8 @@ D2D1_POINT_2F Kinect::SkeletonScreen( Vector4 skeletonPoint, int width, int heig
 	LONG x, y;
 	USHORT depth;
 
-    // calculate the skeleton's position on the screen
-    // NuiTransformSkeletonToDepthImage returns coordinates in NUI_IMAGE_RESOLUTION_320x240 space
+	// calculate the skeleton's position on the screen
+	// NuiTransformSkeletonToDepthImage returns coordinates in NUI_IMAGE_RESOLUTION_320x240 space
 	NuiTransformSkeletonToDepthImage( skeletonPoint, &x, &y, &depth);
 
 	float screenPointX = static_cast<float>(x * width) / screenWidth;
@@ -687,7 +718,7 @@ D2D1_POINT_2F Kinect::SkeletonScreen( Vector4 skeletonPoint, int width, int heig
 bool Kinect::gotSkeletonAlert()
 {
 	NUI_SKELETON_FRAME sFrame = {0};
-	
+
 	bool foundSkeleton = false;
 
 	if ( SUCCEEDED(globalNui->NuiSkeletonGetNextFrame( 0, &sFrame)))
@@ -745,10 +776,10 @@ bool Kinect::gotSkeletonAlert()
 			// We have only recieved the point that is the center of the skeleton
 			// draw that point.
 			D2D1_ELLIPSE ellipse = D2D1::Ellipse(
-                SkeletonScreen( sFrame.SkeletonData[i].Position, width, height ),
-                jointThickness,
-                jointThickness
-                );
+				SkeletonScreen( sFrame.SkeletonData[i].Position, width, height ),
+				jointThickness,
+				jointThickness
+				);
 			renderTarget->DrawEllipse(ellipse, brushJointTracked);
 		}
 	}
@@ -798,7 +829,6 @@ void Kinect::UpdateDepthFlag( DWORD flag, bool value)
 HRESULT Kinect::EnsureDirect2DResources()
 {
 	HRESULT hr = S_OK;
-
 	if (!renderTarget)
 	{
 		RECT rc;
@@ -813,7 +843,7 @@ HRESULT Kinect::EnsureDirect2DResources()
 
 		hr = d2DFactory->CreateHwndRenderTarget(
 			rtProp,
-			D2D1::HwndRenderTargetProperties(GetDlgItem( hWnd, 1012 ), size),
+			D2D1::HwndRenderTargetProperties( GetDlgItem( hWnd, 1012 ), size),
 			&renderTarget
 			);
 		if ( FAILED(hr))
@@ -821,17 +851,17 @@ HRESULT Kinect::EnsureDirect2DResources()
 			// error code, yo.
 		}
 
-		 //light green
-        renderTarget->CreateSolidColorBrush( D2D1::ColorF( 68, 192, 68 ), &brushJointTracked );
+		//light green
+		renderTarget->CreateSolidColorBrush( D2D1::ColorF( 68, 192, 68 ), &brushJointTracked );
 
-        //yellow
-        renderTarget->CreateSolidColorBrush( D2D1::ColorF( 255, 255, 0 ), &brushJointInferred );
+		//yellow
+		renderTarget->CreateSolidColorBrush( D2D1::ColorF( 255, 255, 0 ), &brushJointInferred );
 
-        //green
-        renderTarget->CreateSolidColorBrush( D2D1::ColorF( 0, 128, 0 ), &brushBoneTracked );
+		//green
+		renderTarget->CreateSolidColorBrush( D2D1::ColorF( 0, 128, 0 ), &brushBoneTracked );
 
-        //gray
-        renderTarget->CreateSolidColorBrush( D2D1::ColorF( 128, 128, 128 ), &brushBoneInferred );
+		//gray
+		renderTarget->CreateSolidColorBrush( D2D1::ColorF( 128, 128, 128 ), &brushBoneInferred );
 	}
 	return hr;
 }
