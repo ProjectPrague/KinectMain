@@ -30,7 +30,7 @@ HRESULT ImageDraw::CreateResources()
 	{
 		D2D1_SIZE_U size = D2D1::SizeU( sourceWidth, sourceHeight);
 
-		D2D1_RENDER_TARGET_PROPERTIES rtProps = D2D1::RenderTargetProperties();
+		D2D1_RENDER_TARGET_PROPERTIES rtProps = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_DEFAULT, D2D1::PixelFormat( DXGI_FORMAT_UNKNOWN, D2D1_ALPHA_MODE_PREMULTIPLIED ));
 		rtProps.pixelFormat = D2D1::PixelFormat( DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE);
 		rtProps.usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE;
 
@@ -94,7 +94,7 @@ bool ImageDraw::Initialize( HWND hWnd, ID2D1Factory * pD2DFactory, int sourceWid
 }
 
 // GDP = Graphical Data Processor.
-bool ImageDraw::GDP ( BYTE * image, unsigned long cbImage )
+bool ImageDraw::GDP ( BYTE * image, unsigned long cbImage)
 {
 	// Check for inforrectly sized image data.
 	if ( cbImage < ((sourceHeight - 1) * sourceStride) + (sourceWidth * 4) )

@@ -16,7 +16,7 @@ public:
 
 	// Set the window to draw to as well as the video format
 	// implied biets per pixel is 32.
-	bool GDP ( BYTE * image, unsigned long cbImage );
+	bool GDP ( BYTE * image, unsigned long cbImage);
 
 private:
 

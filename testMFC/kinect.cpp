@@ -145,7 +145,6 @@ Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 	// da creator.
 	this->hWnd = hwnd;
 	this->globalNui = globalNui;
-	skeletonTrackingFlags = NUI_SKELETON_TRACKING_FLAG_ENABLE_IN_NEAR_RANGE;
 }
 
 Kinect::~Kinect()
@@ -269,8 +268,8 @@ void Kinect::unInit()
 	drawDepth = NULL;
 	drawColor = NULL;
 	//trackedSkeletons = 0;
-	skeletonTrackingFlags = NUI_SKELETON_TRACKING_FLAG_ENABLE_IN_NEAR_RANGE;
-	depthStreamFlags = 0;
+	skeletonTrackingFlags = NUI_SKELETON_TRACKING_FLAG_ENABLE_IN_NEAR_RANGE | NUI_SKELETON_TRACKING_FLAG_ENABLE_SEATED_SUPPORT;
+	depthStreamFlags = NUI_IMAGE_STREAM_FLAG_ENABLE_NEAR_MODE;
 	ZeroMemory(stickySkeletonId,sizeof(stickySkeletonId));
 }
 
@@ -435,7 +434,7 @@ bool Kinect::gotColorAlert()
 void Kinect::blankSkeletonScreen( )
 {
 	renderTarget->BeginDraw( );
-	renderTarget->Clear( );
+	renderTarget->Clear(  D2D1::ColorF( 0, 0.0f ));
 	renderTarget->EndDraw( );
 }
 
@@ -600,7 +599,7 @@ void Kinect::UpdateSkelly( const NUI_SKELETON_FRAME &skelly )
 		}
 	}
 
-	/*
+	/*  For sticky skeletons, could be nice later on.
 
 	if ( SV_TRACKED_SKELETONS_NEAREST1 == m_TrackedSkeletons || SV_TRACKED_SKELETONS_NEAREST2 == m_TrackedSkeletons )
 	{
@@ -755,10 +754,10 @@ bool Kinect::gotSkeletonAlert()
 	hr = EnsureDirect2DResources();
 
 	renderTarget->BeginDraw( );
-	renderTarget->Clear( );
+	renderTarget->Clear(D2D1::ColorF( 0, 0.f));
 
 	RECT rct;
-	GetClientRect( GetDlgItem( hWnd, 1012 ), &rct);
+	GetClientRect( GetDlgItem( hWnd, 1010 ), &rct);
 	int width = rct.right;
 	int height = rct.bottom;
 
@@ -832,7 +831,7 @@ HRESULT Kinect::EnsureDirect2DResources()
 	if (!renderTarget)
 	{
 		RECT rc;
-		GetWindowRect( GetDlgItem( hWnd, 1012 ), &rc);
+		GetWindowRect( GetDlgItem( hWnd, 1010 ), &rc);
 
 		int width = rc.right - rc.left;
 		int height = rc.bottom - rc.top;
@@ -843,7 +842,7 @@ HRESULT Kinect::EnsureDirect2DResources()
 
 		hr = d2DFactory->CreateHwndRenderTarget(
 			rtProp,
-			D2D1::HwndRenderTargetProperties( GetDlgItem( hWnd, 1012 ), size),
+			D2D1::HwndRenderTargetProperties( GetDlgItem( hWnd, 1010 ), size),
 			&renderTarget
 			);
 		if ( FAILED(hr))
