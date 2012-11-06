@@ -171,7 +171,7 @@ HRESULT Kinect::initialize()
 	nextSkeletonEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
 
 	// recource ensurement? D2D resources.
-	EnsureDirect2DResources();
+
 
 	drawDepth = new ImageDraw();
 	result = drawDepth->Initialize( GetDlgItem( hWnd, 1011), d2DFactory, 320, 240, 320 * 4);
@@ -186,7 +186,7 @@ HRESULT Kinect::initialize()
 	{
 		// Display Error regarding the color.
 	}
-
+		EnsureDirect2DResources();
 	//Flags for the kinect, usage is one line under the code.
 	DWORD nuiFlags = NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX | NUI_INITIALIZE_FLAG_USES_SKELETON | NUI_INITIALIZE_FLAG_USES_COLOR;
 
@@ -434,12 +434,13 @@ bool Kinect::gotColorAlert()
 void Kinect::blankSkeletonScreen( )
 {
 	renderTarget->BeginDraw( );
-	renderTarget->Clear(  D2D1::ColorF( 0, 0.0f ));
+	renderTarget->Clear();
 	renderTarget->EndDraw( );
 }
 
 void Kinect::DrawBone( const NUI_SKELETON_DATA & skelly, NUI_SKELETON_POSITION_INDEX bone0, NUI_SKELETON_POSITION_INDEX bone1)
 {
+	ID2D1Bitmap *            bitmap;
 	NUI_SKELETON_POSITION_TRACKING_STATE bone0State = skelly.eSkeletonPositionTrackingState[bone0];
 	NUI_SKELETON_POSITION_TRACKING_STATE bone1State = skelly.eSkeletonPositionTrackingState[bone1];
 
@@ -707,6 +708,10 @@ D2D1_POINT_2F Kinect::SkeletonScreen( Vector4 skeletonPoint, int width, int heig
 	// calculate the skeleton's position on the screen
 	// NuiTransformSkeletonToDepthImage returns coordinates in NUI_IMAGE_RESOLUTION_320x240 space
 	NuiTransformSkeletonToDepthImage( skeletonPoint, &x, &y, &depth);
+	std::stringstream ss;
+	ss<<x;
+	CString s(ss.str().c_str());
+	OutputDebugString(s + "\n");
 
 	float screenPointX = static_cast<float>(x * width) / screenWidth;
 	float screenPointY = static_cast<float>(y * height) / screenHeight;
@@ -754,7 +759,7 @@ bool Kinect::gotSkeletonAlert()
 	hr = EnsureDirect2DResources();
 
 	renderTarget->BeginDraw( );
-	renderTarget->Clear(D2D1::ColorF( 0, 0.f));
+	renderTarget->Clear();
 
 	RECT rct;
 	GetClientRect( GetDlgItem( hWnd, 1010 ), &rct);
@@ -828,6 +833,8 @@ void Kinect::UpdateDepthFlag( DWORD flag, bool value)
 HRESULT Kinect::EnsureDirect2DResources()
 {
 	HRESULT hr = S_OK;
+
+
 	if (!renderTarget)
 	{
 		RECT rc;
@@ -850,7 +857,7 @@ HRESULT Kinect::EnsureDirect2DResources()
 			// error code, yo.
 		}
 
-		//light green
+	    //light green
 		renderTarget->CreateSolidColorBrush( D2D1::ColorF( 68, 192, 68 ), &brushJointTracked );
 
 		//yellow
@@ -862,6 +869,7 @@ HRESULT Kinect::EnsureDirect2DResources()
 		//gray
 		renderTarget->CreateSolidColorBrush( D2D1::ColorF( 128, 128, 128 ), &brushBoneInferred );
 	}
+	
 	return hr;
 }
 

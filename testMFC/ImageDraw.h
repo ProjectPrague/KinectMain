@@ -11,6 +11,8 @@ public:
 	// Destructor
 	~ImageDraw();
 
+	ID2D1HwndRenderTarget *		 getRenderTarget();
+
 	//Initialize
 	bool Initialize( HWND hWnd, ID2D1Factory * pD2DFactory, int sourceWidth, int sourceHeight, int sourceStride );
 
@@ -30,6 +32,7 @@ private:
     ID2D1Factory *           d2DFactory;
     ID2D1HwndRenderTarget *  renderTarget;
     ID2D1Bitmap *            bitmap;
+
 
 	// Ensure necessary Direct2d resources are created
 	HRESULT CreateResources();

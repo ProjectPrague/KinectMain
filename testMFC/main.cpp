@@ -71,8 +71,6 @@ protected:
 		// integer used for counting in for loop for the kinectlist.
 		int i = 0;
 
-
-
 		// need to add comments here.
 		for (std::list<INuiSensor*>::const_iterator it = nuiList.begin();it != nuiList.end();++it,i++)
 		{
@@ -108,7 +106,6 @@ protected:
 		MFC_scKINECTANGLE->SetRange(-27, 27, TRUE);
 
 		CFont * cf = new CFont();
-		//GetObject( (HFONT)GetStockObject(DEFAULT_GUI_FONT
 		cf->CreatePointFont(300,L"Starcraft");
 		MFC_ecFPSCOLOR->SetFont(cf);
 		MFC_ecDEPTHCOLOR->SetFont(cf);
