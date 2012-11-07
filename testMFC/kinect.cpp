@@ -434,7 +434,7 @@ bool Kinect::gotColorAlert()
 void Kinect::blankSkeletonScreen( )
 {
 	renderTarget->BeginDraw( );
-	renderTarget->Clear();
+	renderTarget->Clear( D2D1::ColorF( 0xFFFFFF, 0.5f ) );
 	renderTarget->EndDraw( );
 }
 
@@ -759,10 +759,10 @@ bool Kinect::gotSkeletonAlert()
 	hr = EnsureDirect2DResources();
 
 	renderTarget->BeginDraw( );
-	renderTarget->Clear();
+	renderTarget->Clear(  D2D1::ColorF(0xFFFFFF, 0.5f) );
 
 	RECT rct;
-	GetClientRect( GetDlgItem( hWnd, 1010 ), &rct);
+	GetClientRect( GetDlgItem( hWnd, 1012 ), &rct);
 	int width = rct.right;
 	int height = rct.bottom;
 
@@ -838,18 +838,18 @@ HRESULT Kinect::EnsureDirect2DResources()
 	if (!renderTarget)
 	{
 		RECT rc;
-		GetWindowRect( GetDlgItem( hWnd, 1010 ), &rc);
+		GetWindowRect( GetDlgItem( hWnd, 1012 ), &rc);
 
 		int width = rc.right - rc.left;
 		int height = rc.bottom - rc.top;
 		D2D1_SIZE_U size = D2D1::SizeU( width, height);
 		D2D1_RENDER_TARGET_PROPERTIES rtProp = D2D1::RenderTargetProperties();
-		rtProp.pixelFormat = D2D1::PixelFormat( DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE);
+		rtProp.pixelFormat = D2D1::PixelFormat( DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED);
 		rtProp.usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE;
 
 		hr = d2DFactory->CreateHwndRenderTarget(
 			rtProp,
-			D2D1::HwndRenderTargetProperties( GetDlgItem( hWnd, 1010 ), size),
+			D2D1::HwndRenderTargetProperties( GetDlgItem( hWnd, 1012 ), size),
 			&renderTarget
 			);
 		if ( FAILED(hr))

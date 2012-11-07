@@ -16,7 +16,7 @@ CSliderCtrl * MFC_scKINECTANGLE;
 CStatic * MFC_stCURVAL;
 CStatic * MFC_stNEWVAL;
 CComboBox * MFC_cbKinectList;
-CStatic * MFC_ecFPSCOLOR, * MFC_ecDEPTHCOLOR;
+CStatic * MFC_ecFPSCOLOR, * MFC_ecDEPTHCOLOR, * MFC_pcSKELETON;
 
 //other things
 KinectManager * kinectManager;
@@ -61,6 +61,7 @@ protected:
 		MFC_cbKinectList = (CComboBox *) GetDlgItem(1008);
 		MFC_ecFPSCOLOR = (CStatic *) GetDlgItem(1015);
 		MFC_ecDEPTHCOLOR = (CStatic *) GetDlgItem(1016);
+		MFC_pcSKELETON = (CStatic *) GetDlgItem(1012);
 	}
 
 	void initializeInterface()
@@ -109,6 +110,14 @@ protected:
 		cf->CreatePointFont(300,L"Starcraft");
 		MFC_ecFPSCOLOR->SetFont(cf);
 		MFC_ecDEPTHCOLOR->SetFont(cf);
+
+
+		CPaintDC paint(MFC_pcSKELETON);
+		CRect rErase;
+		CBrush * bClear = new CBrush( RGB(0,0,0));
+		MFC_pcSKELETON->GetClientRect(&rErase);
+		paint.FillRect(rErase, bClear);
+		delete bClear;
 	} 
 	void initializeKinect()
 	{

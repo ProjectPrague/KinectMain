@@ -2,6 +2,7 @@
 #include <afxwin.h>			//MFC core and standard components
 #include "windows.h"
 #include "NuiApi.h"
+#include <FaceTrackLib.h>
 #include <list>
 #include "ImageDraw.h"
 #include "resource.h"
@@ -29,7 +30,7 @@ private:
 	
 	//Handles for the specific data.
 	bool gotColorAlert();
-	bool gotDepthAlert();
+	bool gotDepthAlert(); 
 	bool gotSkeletonAlert();
 
 	// Blanks the skeletonscreen when there is no skeleton found.
@@ -54,12 +55,12 @@ private:
 	DWORD WINAPI ProcessThread( );
 
 	// Skeletal drawing
-	ID2D1HwndRenderTarget *  renderTarget;
-	ID2D1SolidColorBrush *   brushJointTracked;
-	ID2D1SolidColorBrush *   brushJointInferred;
-	ID2D1SolidColorBrush *   brushBoneTracked;
-	ID2D1SolidColorBrush *   brushBoneInferred;
-	D2D1_POINT_2F            points[NUI_SKELETON_POSITION_COUNT];
+	ID2D1HwndRenderTarget *   renderTarget;
+	ID2D1SolidColorBrush  *   brushJointTracked;
+	ID2D1SolidColorBrush  *   brushJointInferred;
+	ID2D1SolidColorBrush  *   brushBoneTracked;
+	ID2D1SolidColorBrush  *   brushBoneInferred;
+	D2D1_POINT_2F             points[NUI_SKELETON_POSITION_COUNT];
 
 	// Draw devices
 	ImageDraw *            drawDepth;
