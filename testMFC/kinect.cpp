@@ -138,7 +138,7 @@ void CALLBACK KinectManager::OnSensorStatusChanged( HRESULT hr, const OLECHAR* i
 //
 //	return;
 //}
-
+//---------------------------END OF KINECTMANAGER, START OF KINECT ----------
 Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 {
 	unInit();
@@ -170,9 +170,6 @@ HRESULT Kinect::initialize()
 	nextColorFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
 	nextSkeletonEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
 
-	// recource ensurement? D2D resources.
-
-
 	drawDepth = new ImageDraw();
 	result = drawDepth->Initialize( GetDlgItem( hWnd, 1011), d2DFactory, 320, 240, 320 * 4);
 	if (!result )
@@ -186,7 +183,10 @@ HRESULT Kinect::initialize()
 	{
 		// Display Error regarding the color.
 	}
-		EnsureDirect2DResources();
+
+	// recource ensurement
+	EnsureDirect2DResources();
+
 	//Flags for the kinect, usage is one line under the code.
 	DWORD nuiFlags = NUI_INITIALIZE_FLAG_USES_DEPTH_AND_PLAYER_INDEX | NUI_INITIALIZE_FLAG_USES_SKELETON | NUI_INITIALIZE_FLAG_USES_COLOR;
 
@@ -225,6 +225,10 @@ HRESULT Kinect::initialize()
 		&videoStreamHandle);
 
 	// error toevoegen voor de image stream
+	if ( FAILED(hr) )
+	{
+
+	}
 
 	//Initialize the depth stream.
 	hr = globalNui->NuiImageStreamOpen( 
@@ -236,7 +240,47 @@ HRESULT Kinect::initialize()
 		&depthStreamHandle );
 
 	// error toevoegen voor de depth stream 
+	if ( FAILED(hr) )
+	{
 
+	}
+
+	// create instance of the face tracker.
+	faceTracker = FTCreateFaceTracker();
+	if(!faceTracker)
+	{
+		// add error for face tracker.
+	}
+
+	// Video camera config for face tracking.
+	FT_CAMERA_CONFIG videoCameraConfig = {640, 480, NUI_CAMERA_COLOR_NOMINAL_FOCAL_LENGTH_IN_PIXELS};
+
+	// Depth camera config for face tracking.
+	FT_CAMERA_CONFIG depthCameraConfig = {320, 240, NUI_CAMERA_DEPTH_NOMINAL_FOCAL_LENGTH_IN_PIXELS};
+
+	// Initalize the face tracker.
+	hr = faceTracker->Initialize(&videoCameraConfig, &depthCameraConfig, NULL, NULL);
+	if( FAILED(hr))
+	{
+		// error for initializing of faceTracker.
+	}
+
+	hr = faceTracker->CreateFTResult(&faceTrackingResult);
+	if( FAILED(hr))
+	{
+		// error for interface.
+	}
+
+	faceTrackingColorData = FTCreateImage();
+	if(!faceTrackingColorData || FAILED(hr = faceTrackingColorData->Allocate(videoCameraConfig.Height, videoCameraConfig.Width, FTIMAGEFORMAT_UINT8_X8R8G8B8)))
+	{
+		// return an ERRORWOZOZZZ.
+	}
+	faceTrackingDepthData = FTCreateImage();
+	if(!faceTrackingDepthData || FAILED(hr = faceTrackingDepthData->Allocate(depthCameraConfig.Width, depthCameraConfig.Height, FTIMAGEFORMAT_UINT16_D13P3)))
+	{
+		// return an error
+	}
 
 	// Start the processing thread
 	treadNuiProcessStop = CreateEvent( NULL, FALSE, FALSE, NULL );
@@ -271,6 +315,9 @@ void Kinect::unInit()
 	skeletonTrackingFlags = NUI_SKELETON_TRACKING_FLAG_ENABLE_IN_NEAR_RANGE | NUI_SKELETON_TRACKING_FLAG_ENABLE_SEATED_SUPPORT;
 	depthStreamFlags = NUI_IMAGE_STREAM_FLAG_ENABLE_NEAR_MODE;
 	ZeroMemory(stickySkeletonId,sizeof(stickySkeletonId));
+
+	// Facetracking uninits.
+	faceTrackingResult = NULL;
 }
 
 // Thread to handle Kinect processing, calls class instance thread processor.
@@ -280,8 +327,7 @@ DWORD WINAPI Kinect::ProcessThread( LPVOID param )		// LPVOID is a VOID LONG POI
 	return pThis->ProcessThread();
 }
 
-
-
+//This method gets called by its static counterpart, and is the actual thread logic
 DWORD WINAPI Kinect::ProcessThread()
 {
 	//numEvents is the number of events, handleEvents is an Array of all the events being handled.
@@ -291,6 +337,7 @@ DWORD WINAPI Kinect::ProcessThread()
 	int eventIdx, colorFrameFPS = 0, depthFrameFPS = 0;
 	DWORD t, lastColorFPSTime, lastDepthFPSTime;
 	CString TextFPS;
+
 
 	// Initializes the static text fields for FPS text.
 	CStatic * MFC_ecFPSCOLOR, * MFC_ecFPSDEPTH;
@@ -334,13 +381,6 @@ DWORD WINAPI Kinect::ProcessThread()
 		// is essential, a priority queue should be used to service the item
 		// which has been updated the longest ago Copyright Microsoft.
 
-		if ( WAIT_OBJECT_0 == WaitForSingleObject( nextDepthFrameEvent, 0) )
-		{
-			if( gotDepthAlert() )
-			{
-				++depthFrameFPS;
-			}
-		}
 
 		if ( WAIT_OBJECT_0 == WaitForSingleObject( nextColorFrameEvent, 0) )
 		{
@@ -350,12 +390,21 @@ DWORD WINAPI Kinect::ProcessThread()
 			}
 		}
 
+		if ( WAIT_OBJECT_0 == WaitForSingleObject( nextDepthFrameEvent, 0) )
+		{
+			if( gotDepthAlert() )
+			{
+				++depthFrameFPS;
+			}
+		}
+
 		if (WAIT_OBJECT_0 == WaitForSingleObject( nextSkeletonEvent, 0))
 		{
 			if (gotSkeletonAlert() )
 			{
 			}
 		}
+
 
 		// fps counter for the color stream.
 		// compare first frametime with the current time, if more then 1000 passed,
@@ -395,8 +444,7 @@ DWORD WINAPI Kinect::ProcessThread()
 	return 0;
 }
 
-// gotColorAlert() handles new color data
-
+//Handles color data
 bool Kinect::gotColorAlert()
 {
 	NUI_IMAGE_FRAME frame;
@@ -431,6 +479,157 @@ bool Kinect::gotColorAlert()
 	return processedFrame;
 }
 
+// Handles depth data.
+bool Kinect::gotDepthAlert()
+{
+	NUI_IMAGE_FRAME frame;
+	bool processedFrame = true;
+	//get the next depthFrame from the kinect
+	HRESULT hr = globalNui->NuiImageStreamGetNextFrame(
+		depthStreamHandle,
+		0,
+		&frame);
+
+	if ( FAILED(hr) )
+	{
+		return false;
+	}
+	//get the data we need: frame now also contains information about the kinect it came from, etc. We do not need that.
+	INuiFrameTexture * texture = frame.pFrameTexture;
+	NUI_LOCKED_RECT LockedRect;
+	//lock the data we are going to use, so that other threads cant change it while we are using it.
+	texture->LockRect(0, &LockedRect, NULL, 0);
+	if( 0 != LockedRect.Pitch)
+	{
+		DWORD fWidth, fHeight;
+
+		NuiImageResolutionToSize( frame.eResolution, fWidth, fHeight);
+
+		// draw the bits to the bitmap
+		BYTE * rgbrun = depthRGBX;
+		const USHORT * bufferRun = (const USHORT *)LockedRect.pBits;
+
+		// The end pixel is start + width*height. (-1 ?)
+		const USHORT * bufferEnd = bufferRun + (fWidth * fHeight);
+
+		//If the following statement returns a 0 as result, there will be an assertion error that will terminate the program.
+		assert( fWidth * fHeight * bytesPerPixel <= ARRAYSIZE(depthRGBX) );
+		//all the checks are now done and everything seems okay. Now we are going to convert distance to color.
+		while( bufferRun < bufferEnd)
+		{
+			USHORT depth = *bufferRun;
+			USHORT realdepth = NuiDepthPixelToDepth(depth);
+			USHORT player = NuiDepthPixelToPlayerIndex(depth);
+
+			// transform 13-bit depth information into an 8-bit intensity appropriate
+			// for display (we disregard information in most significant bit)
+			BYTE intensity = static_cast<BYTE>(~(realdepth >> 4));					// inverteren?
+
+			// tint the intensity by dividing per-player values.
+			*(rgbrun++) = intensity >> intensityShiftByPlayerB[player];				
+			*(rgbrun++) = intensity >> intensityShiftByPlayerG[player];
+			*(rgbrun++) = intensity >> intensityShiftByPlayerR[player];
+
+			// No alpha information, skip the last byte.
+			++rgbrun;
+
+			++bufferRun;
+		}
+		//the distance has been recalculated to color and now the ImageDraw Class can make a picture from it.
+		drawDepth->GDP( depthRGBX, fWidth * fHeight * bytesPerPixel);
+	}
+	else
+	{
+		processedFrame = false;
+		OutputDebugString(L"Buffer length of received texture is BOGUS.\r\n Motherfucker");
+	}
+	//unlock the just used data
+	texture->UnlockRect(0);
+	//tell the kinect to remove the frame from its buffer.
+	globalNui->NuiImageStreamReleaseFrame( depthStreamHandle, &frame);
+
+	return processedFrame;
+
+}
+
+//Handles skeleton data
+bool Kinect::gotSkeletonAlert()
+{
+	NUI_SKELETON_FRAME sFrame = {0};
+
+	bool foundSkeleton = false;
+
+	if ( SUCCEEDED(globalNui->NuiSkeletonGetNextFrame( 0, &sFrame)))
+	{
+		for ( int i = 0 ; i < NUI_SKELETON_COUNT ; i++)
+		{
+			NUI_SKELETON_TRACKING_STATE trackState = sFrame.SkeletonData[i].eTrackingState;
+
+			if ( trackState == NUI_SKELETON_TRACKED || trackState == NUI_SKELETON_POSITION_ONLY )
+			{
+				foundSkeleton = true;
+			}
+		}
+	}
+
+	// no skeletons..
+	if (!foundSkeleton)
+	{
+		return true;
+	}
+
+	// smooth out the data (?)
+	HRESULT hr = globalNui->NuiTransformSmooth(&sFrame, NULL); // change the parameters?
+	if ( FAILED(hr) )
+	{
+		return false;
+	}
+
+	//We found a skeleton, restart the timer.
+	screenBlanked = false;
+	lastSkeletonFoundTime = timeGetTime( );
+
+	// Ensure Direct2D is ready to go
+	hr = EnsureDirect2DResources();
+
+	renderTarget->BeginDraw( );
+	renderTarget->Clear(  D2D1::ColorF(0xFFFFFF, 0.5f) );
+
+	RECT rct;
+	GetClientRect( GetDlgItem( hWnd, 1012 ), &rct);
+	int width = rct.right;
+	int height = rct.bottom;
+
+	for ( int i = 0; i < NUI_SKELETON_COUNT; i++)
+	{
+		NUI_SKELETON_TRACKING_STATE trackState = sFrame.SkeletonData[i].eTrackingState;
+
+		if ( trackState == NUI_SKELETON_TRACKED )
+		{
+			// We are tracking the skeleton, we need to draw it.
+			DrawSkeleton( sFrame.SkeletonData[i], width, height);
+		}
+		else if ( trackState == NUI_SKELETON_POSITION_ONLY)
+		{
+			// We have only recieved the point that is the center of the skeleton
+			// draw that point.
+			D2D1_ELLIPSE ellipse = D2D1::Ellipse(
+				SkeletonScreen( sFrame.SkeletonData[i].Position, width, height ),
+				jointThickness,
+				jointThickness
+				);
+			renderTarget->DrawEllipse(ellipse, brushJointTracked);
+		}
+	}
+
+	hr = renderTarget->EndDraw( );
+
+	UpdateSkelly( sFrame );
+}
+
+// -------- GotSkeletonAlert's Helper Classes ---
+
+//Empties the skeleton screen
 void Kinect::blankSkeletonScreen( )
 {
 	renderTarget->BeginDraw( );
@@ -438,6 +637,7 @@ void Kinect::blankSkeletonScreen( )
 	renderTarget->EndDraw( );
 }
 
+//Draws a bone from points
 void Kinect::DrawBone( const NUI_SKELETON_DATA & skelly, NUI_SKELETON_POSITION_INDEX bone0, NUI_SKELETON_POSITION_INDEX bone1)
 {
 	ID2D1Bitmap *            bitmap;
@@ -467,6 +667,7 @@ void Kinect::DrawBone( const NUI_SKELETON_DATA & skelly, NUI_SKELETON_POSITION_I
 	}
 }
 
+//Draws the entire skelton 
 void Kinect::DrawSkeleton( const NUI_SKELETON_DATA & skelly, int windowWidth, int windowHeight)
 {
 	int i;
@@ -627,79 +828,7 @@ void Kinect::UpdateSkelly( const NUI_SKELETON_FRAME &skelly )
 
 }
 
-// Handle new depth data.
-bool Kinect::gotDepthAlert()
-{
-	NUI_IMAGE_FRAME frame;
-	bool processedFrame = true;
-	//get the next depthFrame from the kinect
-	HRESULT hr = globalNui->NuiImageStreamGetNextFrame(
-		depthStreamHandle,
-		0,
-		&frame);
-
-	if ( FAILED(hr) )
-	{
-		return false;
-	}
-	//get the data we need: frame now also contains information about the kinect it came from, etc. We do not need that.
-	INuiFrameTexture * texture = frame.pFrameTexture;
-	NUI_LOCKED_RECT LockedRect;
-	//lock the data we are going to use, so that other threads cant change it while we are using it.
-	texture->LockRect(0, &LockedRect, NULL, 0);
-	if( 0 != LockedRect.Pitch)
-	{
-		DWORD fWidth, fHeight;
-
-		NuiImageResolutionToSize( frame.eResolution, fWidth, fHeight);
-
-		// draw the bits to the bitmap
-		BYTE * rgbrun = depthRGBX;
-		const USHORT * bufferRun = (const USHORT *)LockedRect.pBits;
-
-		// The end pixel is start + width*height. (-1 ?)
-		const USHORT * bufferEnd = bufferRun + (fWidth * fHeight);
-
-		//If the following statement returns a 0 as result, there will be an assertion error that will terminate the program.
-		assert( fWidth * fHeight * bytesPerPixel <= ARRAYSIZE(depthRGBX) );
-		//all the checks are now done and everything seems okay. Now we are going to convert distance to color.
-		while( bufferRun < bufferEnd)
-		{
-			USHORT depth = *bufferRun;
-			USHORT realdepth = NuiDepthPixelToDepth(depth);
-			USHORT player = NuiDepthPixelToPlayerIndex(depth);
-
-			// transform 13-bit depth information into an 8-bit intensity appropriate
-			// for display (we disregard information in most significant bit)
-			BYTE intensity = static_cast<BYTE>(~(realdepth >> 4));					// inverteren?
-
-			// tint the intensity by dividing per-player values.
-			*(rgbrun++) = intensity >> intensityShiftByPlayerB[player];				
-			*(rgbrun++) = intensity >> intensityShiftByPlayerG[player];
-			*(rgbrun++) = intensity >> intensityShiftByPlayerR[player];
-
-			// No alpha information, skip the last byte.
-			++rgbrun;
-
-			++bufferRun;
-		}
-		//the distance has been recalculated to color and now the ImageDraw Class can make a picture from it.
-		drawDepth->GDP( depthRGBX, fWidth * fHeight * bytesPerPixel);
-	}
-	else
-	{
-		processedFrame = false;
-		OutputDebugString(L"Buffer length of received texture is BOGUS.\r\n Motherfucker");
-	}
-	//unlock the just used data
-	texture->UnlockRect(0);
-	//tell the kinect to remove the frame from its buffer.
-	globalNui->NuiImageStreamReleaseFrame( depthStreamHandle, &frame);
-
-	return processedFrame;
-
-}
-
+//Converts the Depthdata to usable pixel data
 D2D1_POINT_2F Kinect::SkeletonScreen( Vector4 skeletonPoint, int width, int height )
 {
 	LONG x, y;
@@ -719,78 +848,48 @@ D2D1_POINT_2F Kinect::SkeletonScreen( Vector4 skeletonPoint, int width, int heig
 	return D2D1::Point2F(screenPointX, screenPointY);
 }
 
-bool Kinect::gotSkeletonAlert()
+//Checks and builds the Hardware rendering part
+HRESULT Kinect::EnsureDirect2DResources()
 {
-	NUI_SKELETON_FRAME sFrame = {0};
+	HRESULT hr = S_OK;
 
-	bool foundSkeleton = false;
 
-	if ( SUCCEEDED(globalNui->NuiSkeletonGetNextFrame( 0, &sFrame)))
+	if (!renderTarget)
 	{
-		for ( int i = 0 ; i < NUI_SKELETON_COUNT ; i++)
+		RECT rc;
+		GetWindowRect( GetDlgItem( hWnd, 1012 ), &rc);
+
+		int width = rc.right - rc.left;
+		int height = rc.bottom - rc.top;
+		D2D1_SIZE_U size = D2D1::SizeU( width, height);
+		D2D1_RENDER_TARGET_PROPERTIES rtProp = D2D1::RenderTargetProperties();
+		rtProp.pixelFormat = D2D1::PixelFormat( DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED);
+		rtProp.usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE;
+
+		hr = d2DFactory->CreateHwndRenderTarget(
+			rtProp,
+			D2D1::HwndRenderTargetProperties( GetDlgItem( hWnd, 1012 ), size),
+			&renderTarget
+			);
+		if ( FAILED(hr))
 		{
-			NUI_SKELETON_TRACKING_STATE trackState = sFrame.SkeletonData[i].eTrackingState;
-
-			if ( trackState == NUI_SKELETON_TRACKED || trackState == NUI_SKELETON_POSITION_ONLY )
-			{
-				foundSkeleton = true;
-			}
+			// error code, yo.
 		}
+
+		//light green
+		renderTarget->CreateSolidColorBrush( D2D1::ColorF( 68, 192, 68 ), &brushJointTracked );
+
+		//yellow
+		renderTarget->CreateSolidColorBrush( D2D1::ColorF( 255, 255, 0 ), &brushJointInferred );
+
+		//green
+		renderTarget->CreateSolidColorBrush( D2D1::ColorF( 0, 128, 0 ), &brushBoneTracked );
+
+		//gray
+		renderTarget->CreateSolidColorBrush( D2D1::ColorF( 128, 128, 128 ), &brushBoneInferred );
 	}
 
-	// no skeletons..
-	if (!foundSkeleton)
-	{
-		return true;
-	}
-
-	// smooth out the data (?)
-	HRESULT hr = globalNui->NuiTransformSmooth(&sFrame, NULL); // change the parameters?
-	if ( FAILED(hr) )
-	{
-		return false;
-	}
-
-	//We found a skeleton, restart the timer.
-	screenBlanked = false;
-	lastSkeletonFoundTime = timeGetTime( );
-
-	// Ensure Direct2D is ready to go
-	hr = EnsureDirect2DResources();
-
-	renderTarget->BeginDraw( );
-	renderTarget->Clear(  D2D1::ColorF(0xFFFFFF, 0.5f) );
-
-	RECT rct;
-	GetClientRect( GetDlgItem( hWnd, 1012 ), &rct);
-	int width = rct.right;
-	int height = rct.bottom;
-
-	for ( int i = 0; i < NUI_SKELETON_COUNT; i++)
-	{
-		NUI_SKELETON_TRACKING_STATE trackState = sFrame.SkeletonData[i].eTrackingState;
-
-		if ( trackState == NUI_SKELETON_TRACKED )
-		{
-			// We are tracking the skeleton, we need to draw it.
-			DrawSkeleton( sFrame.SkeletonData[i], width, height);
-		}
-		else if ( trackState == NUI_SKELETON_POSITION_ONLY)
-		{
-			// We have only recieved the point that is the center of the skeleton
-			// draw that point.
-			D2D1_ELLIPSE ellipse = D2D1::Ellipse(
-				SkeletonScreen( sFrame.SkeletonData[i].Position, width, height ),
-				jointThickness,
-				jointThickness
-				);
-			renderTarget->DrawEllipse(ellipse, brushJointTracked);
-		}
-	}
-
-	hr = renderTarget->EndDraw( );
-
-	UpdateSkelly( sFrame );
+	return hr;
 }
 
 //Get the angle of the current chosen Kinect.
@@ -828,49 +927,6 @@ void Kinect::UpdateDepthFlag( DWORD flag, bool value)
 		depthStreamFlags = newFlag;
 		globalNui->NuiImageStreamSetImageFrameFlags( depthStreamHandle, depthStreamFlags);
 	}
-}
-
-HRESULT Kinect::EnsureDirect2DResources()
-{
-	HRESULT hr = S_OK;
-
-
-	if (!renderTarget)
-	{
-		RECT rc;
-		GetWindowRect( GetDlgItem( hWnd, 1012 ), &rc);
-
-		int width = rc.right - rc.left;
-		int height = rc.bottom - rc.top;
-		D2D1_SIZE_U size = D2D1::SizeU( width, height);
-		D2D1_RENDER_TARGET_PROPERTIES rtProp = D2D1::RenderTargetProperties();
-		rtProp.pixelFormat = D2D1::PixelFormat( DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED);
-		rtProp.usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE;
-
-		hr = d2DFactory->CreateHwndRenderTarget(
-			rtProp,
-			D2D1::HwndRenderTargetProperties( GetDlgItem( hWnd, 1012 ), size),
-			&renderTarget
-			);
-		if ( FAILED(hr))
-		{
-			// error code, yo.
-		}
-
-	    //light green
-		renderTarget->CreateSolidColorBrush( D2D1::ColorF( 68, 192, 68 ), &brushJointTracked );
-
-		//yellow
-		renderTarget->CreateSolidColorBrush( D2D1::ColorF( 255, 255, 0 ), &brushJointInferred );
-
-		//green
-		renderTarget->CreateSolidColorBrush( D2D1::ColorF( 0, 128, 0 ), &brushBoneTracked );
-
-		//gray
-		renderTarget->CreateSolidColorBrush( D2D1::ColorF( 128, 128, 128 ), &brushBoneInferred );
-	}
-	
-	return hr;
 }
 
 //Sets the angle of the specified kinect. 

@@ -91,9 +91,10 @@ protected:
 
 		if(kinectMap.size() == 0)
 		{
-			// do shit.
+			// disable all elements.
 		}
-
+		ss.str(std::string());
+		ss.clear();
 		ss << kinect->getKinectAngle();
 		CString text = ss.str().c_str();
 		//Set the interface as you want it on your first run

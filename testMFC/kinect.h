@@ -20,13 +20,30 @@ public:
 
 	HWND hWnd;
 
+//	IFTImage * getVideoBuffer(){ return(faceTrackingColorData); };
+	//IFTImage * getDepthBuffer(){ return(faceTrackingDepthData); };
+
 private:
 
 	HRESULT EnsureDirect2DResources();
 	void unInit();
 
+	// Global instance of the face tracker.
+	IFTFaceTracker * faceTracker;
+
+	// Result instance for face tracking.
+	IFTResult * faceTrackingResult;
+
+	// Sensor data for Face tracking.
+	FT_SENSOR_DATA sensorData;
+
+	// Images interfaces that hold the RGB and depth data for the facetracking.
+	IFTImage * faceTrackingDepthData;
+	IFTImage * faceTrackingColorData;
+
+
 	// Global NuiSensor.
-	INuiSensor* globalNui;
+	INuiSensor * globalNui;
 	
 	//Handles for the specific data.
 	bool gotColorAlert();
