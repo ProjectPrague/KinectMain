@@ -27,6 +27,9 @@
     <ClInclude Include="Collection.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="faceTracking.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="MainWindow.rc">
@@ -41,6 +44,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ImageDraw.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="faceTracking.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

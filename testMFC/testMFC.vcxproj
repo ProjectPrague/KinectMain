@@ -96,6 +96,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Collection.h" />
+    <ClInclude Include="faceTracking.h" />
     <ClInclude Include="ImageDraw.h" />
     <ClInclude Include="kinect.h" />
     <ClInclude Include="resource.h" />
@@ -104,6 +105,7 @@
     <ResourceCompile Include="MainWindow.rc" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="faceTracking.cpp" />
     <ClCompile Include="ImageDraw.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="kinect.cpp" />

@@ -2,7 +2,6 @@
 #include <afxwin.h>			//MFC core and standard components
 #include "windows.h"
 #include "NuiApi.h"
-#include <FaceTrackLib.h>
 #include <list>
 #include "ImageDraw.h"
 #include "resource.h"
@@ -20,27 +19,10 @@ public:
 
 	HWND hWnd;
 
-//	IFTImage * getVideoBuffer(){ return(faceTrackingColorData); };
-	//IFTImage * getDepthBuffer(){ return(faceTrackingDepthData); };
-
 private:
 
 	HRESULT EnsureDirect2DResources();
 	void unInit();
-
-	// Global instance of the face tracker.
-	IFTFaceTracker * faceTracker;
-
-	// Result instance for face tracking.
-	IFTResult * faceTrackingResult;
-
-	// Sensor data for Face tracking.
-	FT_SENSOR_DATA sensorData;
-
-	// Images interfaces that hold the RGB and depth data for the facetracking.
-	IFTImage * faceTrackingDepthData;
-	IFTImage * faceTrackingColorData;
-
 
 	// Global NuiSensor.
 	INuiSensor * globalNui;
@@ -83,6 +65,9 @@ private:
 	ImageDraw *            drawDepth;
 	ImageDraw *            drawColor;
 	ID2D1Factory *         d2DFactory;
+
+	// VGA bitmap
+	ID2D1Bitmap *            bitmap;
 
 	// Tread Handles
 	HANDLE        treadNuiProcess;

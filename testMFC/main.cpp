@@ -22,7 +22,7 @@ CStatic * MFC_ecFPSCOLOR, * MFC_ecDEPTHCOLOR, * MFC_pcSKELETON;
 KinectManager * kinectManager;
 Kinect * kinect;
 std::list<INuiSensor*> nuiList;
-int sliderAngle;
+int sliderAngle, kinectAngle;
 
 class MAINFORM: public CDialog
 {
@@ -93,9 +93,10 @@ protected:
 		{
 			// disable all elements.
 		}
+		kinectAngle = kinect->getKinectAngle();
 		ss.str(std::string());
 		ss.clear();
-		ss << kinect->getKinectAngle();
+		ss << kinectAngle;
 		CString text = ss.str().c_str();
 		//Set the interface as you want it on your first run
 		//You need an LPCTSTR for a SetWindowText. For this kind of string use, just prefix an L. For normal strings: convert to CString: CString s(str.c_str())
@@ -104,7 +105,7 @@ protected:
 		MFC_ecCURVAL->SetWindowText(text);
 		MFC_ecNEWVAL->SetWindowText(text);
 		MFC_scKINECTANGLE->SetRange(-27, 27, TRUE);
-		MFC_scKINECTANGLE->SetPos(kinect->getKinectAngle()*-1);
+		MFC_scKINECTANGLE->SetPos(kinectAngle*-1);
 		MFC_scKINECTANGLE->SetRange(-27, 27, TRUE);
 
 		CFont * cf = new CFont();
@@ -127,6 +128,30 @@ protected:
 		kinectManager->initialize(this->GetSafeHwnd());
 		nuiList = kinectManager->getGlobalNuiList();
 	}
+
+	static DWORD WINAPI setKinect(LPVOID args){
+		MAINFORM *pthis = (MAINFORM *) args;
+		return pthis->setKinect();
+	}
+
+	DWORD WINAPI setKinect(){
+		// When the buttons has been clicked, set the angle of the kinect.
+		kinect->setKinectAngle(sliderAngle);
+
+		// After setting the kinect angle, update the current value from the kinect.
+		
+		std::stringstream ss;
+		kinectAngle = kinect->getKinectAngle();
+		ss << kinectAngle; // Value comes from the kinect.
+		CString text = ss.str().c_str();
+		//set the textfield
+		MFC_ecCURVAL->SetWindowText(text);
+		//set the slider
+		MFC_scKINECTANGLE->SetPos(kinectAngle * -1);
+		//set the range to force an update
+		MFC_scKINECTANGLE->SetRange(-27, 27, TRUE);
+		return 0;
+	}
 	
 //-----------------------------------------------------------------------------------------
 // Event definition. These are the methods accessed when the main
@@ -141,18 +166,19 @@ public:
 		CString text = ss.str().c_str();
 		MFC_ecNEWVAL->SetWindowText(text);
 		*pResult = 0;
+		
 	}
 
 	void OnBnClickedsetval()
 	{
-		// When the buttons has been clicked, set the angle of the kinect.
-		kinect->setKinectAngle(sliderAngle);
+		if (kinectAngle == sliderAngle){
+			return;
+		}
 
-		// After setting the kinect angle, update the current value from the kinect.
-		std::stringstream ss;
-		ss << kinect->getKinectAngle(); // Value comes from the kinect.
-		CString text = ss.str().c_str();
-		MFC_ecCURVAL->SetWindowText(text);
+		//If the value from this slider differs from the current kinect value, set it by starting a Thread for doing this.
+		DWORD threadID;
+		HANDLE thread = CreateThread(NULL, 0, setKinect, this, 0, &threadID);
+		
 	}
 
 // declares the message map

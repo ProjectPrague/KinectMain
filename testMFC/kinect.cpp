@@ -245,42 +245,7 @@ HRESULT Kinect::initialize()
 
 	}
 
-	// create instance of the face tracker.
-	faceTracker = FTCreateFaceTracker();
-	if(!faceTracker)
-	{
-		// add error for face tracker.
-	}
-
-	// Video camera config for face tracking.
-	FT_CAMERA_CONFIG videoCameraConfig = {640, 480, NUI_CAMERA_COLOR_NOMINAL_FOCAL_LENGTH_IN_PIXELS};
-
-	// Depth camera config for face tracking.
-	FT_CAMERA_CONFIG depthCameraConfig = {320, 240, NUI_CAMERA_DEPTH_NOMINAL_FOCAL_LENGTH_IN_PIXELS};
-
-	// Initalize the face tracker.
-	hr = faceTracker->Initialize(&videoCameraConfig, &depthCameraConfig, NULL, NULL);
-	if( FAILED(hr))
-	{
-		// error for initializing of faceTracker.
-	}
-
-	hr = faceTracker->CreateFTResult(&faceTrackingResult);
-	if( FAILED(hr))
-	{
-		// error for interface.
-	}
-
-	faceTrackingColorData = FTCreateImage();
-	if(!faceTrackingColorData || FAILED(hr = faceTrackingColorData->Allocate(videoCameraConfig.Height, videoCameraConfig.Width, FTIMAGEFORMAT_UINT8_X8R8G8B8)))
-	{
-		// return an ERRORWOZOZZZ.
-	}
-	faceTrackingDepthData = FTCreateImage();
-	if(!faceTrackingDepthData || FAILED(hr = faceTrackingDepthData->Allocate(depthCameraConfig.Width, depthCameraConfig.Height, FTIMAGEFORMAT_UINT16_D13P3)))
-	{
-		// return an error
-	}
+	// FT Init beginnen
 
 	// Start the processing thread
 	treadNuiProcessStop = CreateEvent( NULL, FALSE, FALSE, NULL );
@@ -315,9 +280,6 @@ void Kinect::unInit()
 	skeletonTrackingFlags = NUI_SKELETON_TRACKING_FLAG_ENABLE_IN_NEAR_RANGE | NUI_SKELETON_TRACKING_FLAG_ENABLE_SEATED_SUPPORT;
 	depthStreamFlags = NUI_IMAGE_STREAM_FLAG_ENABLE_NEAR_MODE;
 	ZeroMemory(stickySkeletonId,sizeof(stickySkeletonId));
-
-	// Facetracking uninits.
-	faceTrackingResult = NULL;
 }
 
 // Thread to handle Kinect processing, calls class instance thread processor.
@@ -464,7 +426,9 @@ bool Kinect::gotColorAlert()
 	if( lockedRect.Pitch != 0)
 	{
 		//draw it to the screen.
+		//memcpy(faceTrackingColorData->GetBuffer(), PBYTE(lockedRect.pBits), min(faceTrackingColorData->GetBufferSize, UINT(texture->BufferLen()))); // <----------------------------------------------------------*********
 		drawColor->GDP( static_cast<BYTE *>(lockedRect.pBits), lockedRect.size);
+		bitmap->CopyFromMemory(NULL, static_cast<BYTE *>(lockedRect.pBits), 640 * 4);
 	}
 	else
 	{
@@ -594,11 +558,12 @@ bool Kinect::gotSkeletonAlert()
 
 	renderTarget->BeginDraw( );
 	renderTarget->Clear(  D2D1::ColorF(0xFFFFFF, 0.5f) );
-
+	renderTarget->DrawBitmap( bitmap );
+	
 	RECT rct;
 	GetClientRect( GetDlgItem( hWnd, 1012 ), &rct);
-	int width = rct.right;
-	int height = rct.bottom;
+	int width = 640; //rct.right;
+	int height = 480;// rct.bottom;
 
 	for ( int i = 0; i < NUI_SKELETON_COUNT; i++)
 	{
@@ -859,9 +824,9 @@ HRESULT Kinect::EnsureDirect2DResources()
 		RECT rc;
 		GetWindowRect( GetDlgItem( hWnd, 1012 ), &rc);
 
-		int width = rc.right - rc.left;
-		int height = rc.bottom - rc.top;
-		D2D1_SIZE_U size = D2D1::SizeU( width, height);
+		int width = 640;// (rc.right - rc.left);
+		int height = 480; //(rc.bottom - rc.top);
+		D2D1_SIZE_U size = D2D1::SizeU(width, height);
 		D2D1_RENDER_TARGET_PROPERTIES rtProp = D2D1::RenderTargetProperties();
 		rtProp.pixelFormat = D2D1::PixelFormat( DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED);
 		rtProp.usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE;
@@ -875,6 +840,12 @@ HRESULT Kinect::EnsureDirect2DResources()
 		{
 			// error code, yo.
 		}
+
+		hr = renderTarget->CreateBitmap(
+			size,
+			D2D1::BitmapProperties( D2D1::PixelFormat( DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE) ),
+			&bitmap
+			);
 
 		//light green
 		renderTarget->CreateSolidColorBrush( D2D1::ColorF( 68, 192, 68 ), &brushJointTracked );
