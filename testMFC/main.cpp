@@ -71,40 +71,44 @@ protected:
 		std::stringstream ss;
 		// integer used for counting in for loop for the kinectlist.
 		int i = 0;
+		//Some pre-kinect-check Interface initialisation to make the GUI look nice, even if there is no Kinect
+		MFC_scKINECTANGLE->SetRange(-27, 27, TRUE);
+		//You need an LPCTSTR for a SetWindowText. For this kind of string use, just prefix an L. For normal strings: convert to CString: CString s(str.c_str())
+		MFC_stCURVAL->SetWindowText(L"Current Kinect Angle");
+		MFC_stNEWVAL->SetWindowText(L"New Kinect Angle");
 
-		// need to add comments here.
-		for (std::list<INuiSensor*>::const_iterator it = nuiList.begin();it != nuiList.end();++it,i++)
-		{
+		//The check if there is a Kinect
+		if (nuiList.size() > 0){
+			for (std::list<INuiSensor*>::const_iterator it = nuiList.begin();it != nuiList.end();++it,i++)
+			{
 				ss.clear();
 				ss << i;
 				CString text = ss.str().c_str();
 				MFC_cbKinectList->AddString(L"Kinect "+text);
 				kinectMap[i] = (*it)->NuiDeviceConnectionId();
 				CString textJeMoeder = (LPCTSTR) (*it)->NuiUniqueId();
-		}
-
-		if(kinectMap.size() > 0)
-		{
-			kinect = kinectManager->selectKinect((LPCTSTR) kinectMap[0]);
+			}
 			MFC_cbKinectList->SetCurSel(0);
-		}
+		} else {
+			//if there is no kinect
+			//disable usable GUI elements
+			MFC_bSETVAL->EnableWindow(false);
+			MFC_scKINECTANGLE->EnableWindow(false);
+			MFC_cbKinectList ->EnableWindow(false);
+			//Fill the two EditControls with a 0
+			MFC_ecCURVAL->SetWindowText(L"0");
+			MFC_ecNEWVAL->SetWindowText(L"0");
+			return;
+		}	
 
-		if(kinectMap.size() == 0)
-		{
-			// disable all elements.
-		}
 		kinectAngle = kinect->getKinectAngle();
 		ss.str(std::string());
 		ss.clear();
 		ss << kinectAngle;
 		CString text = ss.str().c_str();
 		//Set the interface as you want it on your first run
-		//You need an LPCTSTR for a SetWindowText. For this kind of string use, just prefix an L. For normal strings: convert to CString: CString s(str.c_str())
-		MFC_stCURVAL->SetWindowText(L"Current Kinect Angle");
-		MFC_stNEWVAL->SetWindowText(L"New Kinect Angle");
 		MFC_ecCURVAL->SetWindowText(text);
 		MFC_ecNEWVAL->SetWindowText(text);
-		MFC_scKINECTANGLE->SetRange(-27, 27, TRUE);
 		MFC_scKINECTANGLE->SetPos(kinectAngle*-1);
 		MFC_scKINECTANGLE->SetRange(-27, 27, TRUE);
 
@@ -112,7 +116,6 @@ protected:
 		cf->CreatePointFont(300,L"Starcraft");
 		MFC_ecFPSCOLOR->SetFont(cf);
 		MFC_ecDEPTHCOLOR->SetFont(cf);
-
 
 		CPaintDC paint(MFC_pcSKELETON);
 		CRect rErase;
@@ -127,14 +130,17 @@ protected:
 		kinectManager = new KinectManager;
 		kinectManager->initialize(this->GetSafeHwnd());
 		nuiList = kinectManager->getGlobalNuiList();
+		if (nuiList.size() > 0){
+			kinect = kinectManager->selectKinect((LPCTSTR) kinectMap[0]);
+		}
 	}
 
-	static DWORD WINAPI setKinect(LPVOID args){
+	static DWORD WINAPI setKinectAngle(LPVOID args){
 		MAINFORM *pthis = (MAINFORM *) args;
-		return pthis->setKinect();
+		return pthis->setKinectAngle();
 	}
 
-	DWORD WINAPI setKinect(){
+	DWORD WINAPI setKinectAngle(){
 		// When the buttons has been clicked, set the angle of the kinect.
 		kinect->setKinectAngle(sliderAngle);
 
@@ -178,7 +184,7 @@ public:
 
 		//If the value from this slider differs from the current kinect value, set it by starting a Thread for doing this.
 		DWORD threadID;
-		HANDLE thread = CreateThread(NULL, 0, setKinect, this, 0, &threadID);
+		HANDLE thread = CreateThread(NULL, 0, setKinectAngle, this, 0, &threadID);
 		
 	}
 

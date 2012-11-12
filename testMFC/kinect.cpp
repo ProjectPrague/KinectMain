@@ -26,7 +26,6 @@ KinectManager::KinectManager()
 }
 
 KinectManager::~KinectManager(){
-
 }
 
 std::list<INuiSensor*> KinectManager::getGlobalNuiList()
