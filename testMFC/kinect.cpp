@@ -25,6 +25,10 @@ KinectManager::KinectManager()
 
 }
 
+KinectManager::~KinectManager(){
+
+}
+
 std::list<INuiSensor*> KinectManager::getGlobalNuiList()
 {
 	return nuiList;
@@ -142,7 +146,6 @@ void CALLBACK KinectManager::OnSensorStatusChanged( HRESULT hr, const OLECHAR* i
 Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 {
 	unInit();
-	// da creator.
 	this->hWnd = hwnd;
 	this->globalNui = globalNui;
 }
@@ -150,11 +153,16 @@ Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 Kinect::~Kinect()
 {
 	unInit();
-	//da destructor
 	globalNui->NuiShutdown();
 
 	globalNui->Release();
 	globalNui = NULL;
+
+	//Cleaning up pointers, to prevent memory leaking
+	delete drawDepth;
+	drawDepth = NULL;
+	delete drawColor;
+	drawColor = NULL;
 }
 
 HRESULT Kinect::initialize()

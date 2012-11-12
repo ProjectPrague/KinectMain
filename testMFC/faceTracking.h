@@ -18,8 +18,14 @@ private:
 	// Safe release method.
 	void Release();
 
+	//video configurator
+	HRESULT VideoConfig(FT_CAMERA_CONFIG* config);
+
+	//depth config
+	HRESULT DepthVideoConfig(FT_CAMERA_CONFIG* config);
+
 	// Is the kinect there? :D
-	bool nuiPresent;
+	BOOL nuiPresent;
 
 	// for the video processing.
 	void FaceTracking::faceTrackProcessing();
@@ -37,4 +43,7 @@ private:
 	IFTImage * faceTrackingDepthData;
 	IFTImage * faceTrackingColorData;
 
+	// buffers for the data
+	IFTImage * DepthBuffer;
+	IFTImage * ColorBuffer;
 };

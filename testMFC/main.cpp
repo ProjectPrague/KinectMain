@@ -175,6 +175,7 @@ public:
 			return;
 		}
 
+
 		//If the value from this slider differs from the current kinect value, set it by starting a Thread for doing this.
 		DWORD threadID;
 		HANDLE thread = CreateThread(NULL, 0, setKinect, this, 0, &threadID);

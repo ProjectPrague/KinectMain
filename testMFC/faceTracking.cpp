@@ -2,7 +2,7 @@
 
 FaceTracking::FaceTracking()
 {
-  // All variables must be NULL before the beginning.
+	// All variables must be NULL before the beginning.
 	Release();
 }
 
@@ -14,6 +14,21 @@ FaceTracking::~FaceTracking()
 HRESULT FaceTracking::init()
 {
 	HRESULT hr;
+	FT_CAMERA_CONFIG colorConfig;
+	FT_CAMERA_CONFIG depthConfig;
+
+	// try to start the face tracker.
+	hr = faceTracker->Initialize(&colorConfig, &depthConfig, NULL, NULL);
+	if (SUCCEEDED(hr))
+	{
+		VideoConfig(&colorConfig);
+		DepthVideoConfig(&depthConfig);
+		nuiPresent = TRUE;
+	}
+	else
+	{
+		nuiPresent = false;
+	}
 
 	// create instance of the face tracker.
 	faceTracker = FTCreateFaceTracker();
@@ -22,14 +37,8 @@ HRESULT FaceTracking::init()
 		// add error for face tracker.
 	}
 
-	// Video camera config for face tracking.
-	FT_CAMERA_CONFIG videoCameraConfig = {640, 480, NUI_CAMERA_COLOR_NOMINAL_FOCAL_LENGTH_IN_PIXELS};
-
-	// Depth camera config for face tracking.
-	FT_CAMERA_CONFIG depthCameraConfig = {320, 240, NUI_CAMERA_DEPTH_NOMINAL_FOCAL_LENGTH_IN_PIXELS};
-
 	// Initalize the face tracker.
-	hr = faceTracker->Initialize(&videoCameraConfig, &depthCameraConfig, NULL, NULL);
+	hr = faceTracker->Initialize(&colorConfig, &depthConfig, NULL, NULL);
 	if( FAILED(hr))
 	{
 		// error for initializing of faceTracker.
@@ -42,44 +51,96 @@ HRESULT FaceTracking::init()
 	}
 
 	faceTrackingColorData = FTCreateImage();
-	if(!faceTrackingColorData || FAILED(hr = faceTrackingColorData->Allocate(videoCameraConfig.Height, videoCameraConfig.Width, FTIMAGEFORMAT_UINT8_X8R8G8B8)))
+	if(!faceTrackingColorData || FAILED(hr = faceTrackingColorData->Allocate(colorConfig.Height, colorConfig.Width, FTIMAGEFORMAT_UINT8_X8R8G8B8)))
 	{
 		// return an ERRORWOZOZZZ.
 	}
 	faceTrackingDepthData = FTCreateImage();
-	if(!faceTrackingDepthData || FAILED(hr = faceTrackingDepthData->Allocate(depthCameraConfig.Width, depthCameraConfig.Height, FTIMAGEFORMAT_UINT16_D13P3)))
+	if(!faceTrackingDepthData || FAILED(hr = faceTrackingDepthData->Allocate(depthConfig.Width, depthConfig.Height, FTIMAGEFORMAT_UINT16_D13P3)))
 	{
 		// return an error
 	}
 
 	lastTrackingSuccess = false;
+	faceTrackingThread();
 	return 0;
+}
+
+HRESULT FaceTracking::VideoConfig(FT_CAMERA_CONFIG* config)
+{
+	if(!config)
+	{
+		return E_POINTER;
+	}
+
+	UINT width = ColorBuffer ? ColorBuffer->GetWidth() : 0;
+	UINT height = ColorBuffer ? ColorBuffer->GetHeight() : 0;
+	FLOAT focus = 0.f;
+
+	if(width == 640 && height == 480)
+	{
+		focus = NUI_CAMERA_COLOR_NOMINAL_FOCAL_LENGTH_IN_PIXELS;
+	}
+	else if( width == 1280 && height == 960)
+	{
+		focus = NUI_CAMERA_COLOR_NOMINAL_FOCAL_LENGTH_IN_PIXELS* 2.f;
+	}
+
+	if ( focus == 0.f)
+	{
+		return E_UNEXPECTED;
+	}
+
+	config->FocalLength = focus;
+	config->Height = height;
+	config->Width = width;
+	return(S_OK);
+}
+
+HRESULT FaceTracking::DepthVideoConfig(FT_CAMERA_CONFIG* dConfig)
+{
+	if(!dConfig)
+	{
+		return E_POINTER;
+	}
+
+	UINT width = DepthBuffer ? DepthBuffer->GetWidth() : 0;
+	UINT height = DepthBuffer ? DepthBuffer->GetHeight() : 0;
+	FLOAT focus = 0.f;
+
+	if(width == 320 && height == 240)
+    {
+        focus = NUI_CAMERA_DEPTH_NOMINAL_FOCAL_LENGTH_IN_PIXELS;
+    }
+    else if(width == 640 && height == 480)
+    {
+        focus = NUI_CAMERA_DEPTH_NOMINAL_FOCAL_LENGTH_IN_PIXELS * 2.f;
+    }
+        
+    if(focus == 0.f)
+    {
+        return E_UNEXPECTED;
+    }
+
+	dConfig->FocalLength = focus;
+    dConfig->Width = width;
+    dConfig->Height = height;
+
+    return S_OK;
 }
 
 void FaceTracking::faceTrackProcessing()
 {
 	HRESULT hrFT = E_FAIL;
 
+	if(false)
+	{
 
+	}
 }
 
 DWORD WINAPI FaceTracking::faceTrackingThread()
 {
-	FT_CAMERA_CONFIG videoConfig;
-	FT_CAMERA_CONFIG depthConfig;
-	HRESULT hr;
-
-	// try to start the face tracker.
-	hr = init();
-	if (SUCCEEDED(hr))
-	{
-		nuiPresent = true;
-	}
-	else
-	{
-		nuiPresent = false;
-	}
-
 	//thread loop
 	while(applicationRunning)
 	{
@@ -87,12 +148,12 @@ DWORD WINAPI FaceTracking::faceTrackingThread()
 		faceTrackProcessing();
 	}
 
-
 	return 0;
 }
 
 void FaceTracking::Release()
 {
-  	faceTrackingResult = NULL;
+	faceTrackingResult = NULL;
 	nuiPresent = NULL;
+	ColorBuffer = NULL;
 }
