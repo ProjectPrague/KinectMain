@@ -1,22 +1,38 @@
 #include "faceTracking.h"
 
-FaceTracking::FaceTracking()
+FaceTracking::FaceTracking(HWND hwnd)
 {
+	this->hWnd = hwnd;
+	locked = false;
 	// All variables must be NULL before the beginning.
-	Release();
+	faceTrackingResult = NULL;
+	nuiPresent = NULL;
+	ColorBuffer = NULL;
+	renderTarget = NULL;
 }
 
 FaceTracking::~FaceTracking()
 {
+	SafeRelease(renderTarget);
 	// destruct all variables to NULL before shutting down.
 }
 
-HRESULT FaceTracking::init()
+void FaceTracking::setColorVars(NUI_LOCKED_RECT lockedRect, INuiFrameTexture * texture){
+	d2DcolorData->CopyFromMemory(NULL, static_cast<BYTE *>(lockedRect.pBits), 640 * 4);
+	memcpy(faceTrackingColorData->GetBuffer(), PBYTE(lockedRect.pBits), min(faceTrackingColorData->GetBufferSize(),UINT(texture->BufferLen())));
+}
+
+void FaceTracking::setDepthVars(NUI_LOCKED_RECT lockedRect, INuiFrameTexture * texture){
+	memcpy(faceTrackingDepthData->GetBuffer(), PBYTE(lockedRect.pBits), min(faceTrackingColorData->GetBufferSize(),UINT(texture->BufferLen())));
+}
+
+HRESULT FaceTracking::init(HANDLE mutex)
 {
+	this->mutex = mutex;
 	HRESULT hr;
 	FT_CAMERA_CONFIG colorConfig;
 	FT_CAMERA_CONFIG depthConfig;
-
+	faceTracker = FTCreateFaceTracker(NULL);
 	// try to start the face tracker.
 	hr = faceTracker->Initialize(&colorConfig, &depthConfig, NULL, NULL);
 	if (SUCCEEDED(hr))
@@ -60,10 +76,17 @@ HRESULT FaceTracking::init()
 	{
 		// return an error
 	}
-
+	//Direct2D
+	D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &d2DFactory);
+	d2DFactory->AddRef();
+	ensureDirect2DResources();
+			
 	lastTrackingSuccess = false;
-	faceTrackingThread();
 	return 0;
+}
+
+void FaceTracking::startThread(){
+	thread = CreateThread(0,NULL,faceTrackingThread, this, 0,&threadId);
 }
 
 HRESULT FaceTracking::VideoConfig(FT_CAMERA_CONFIG* config)
@@ -132,11 +155,25 @@ HRESULT FaceTracking::DepthVideoConfig(FT_CAMERA_CONFIG* dConfig)
 void FaceTracking::faceTrackProcessing()
 {
 	HRESULT hrFT = E_FAIL;
-
-	if(false)
-	{
-
+	DWORD result = WaitForSingleObject(mutex,INFINITE);
+	//create local copies of the objects to prevent a lock that takes extremly long
+	if (result == WAIT_OBJECT_0){
+		__try {
+			renderTarget->BeginDraw();
+			renderTarget->DrawBitmap(d2DcolorData);
+			renderTarget->EndDraw();
+		}
+		__finally {
+			ReleaseMutex(mutex);
+		}
+	}	
+}
+DWORD WINAPI FaceTracking::faceTrackingThread(PVOID lpParam){
+	FaceTracking * faceTracking = static_cast<FaceTracking*> (lpParam);
+	if (faceTracking){
+		return faceTracking->faceTrackingThread();
 	}
+	return 1;
 }
 
 DWORD WINAPI FaceTracking::faceTrackingThread()
@@ -144,16 +181,60 @@ DWORD WINAPI FaceTracking::faceTrackingThread()
 	//thread loop
 	while(applicationRunning)
 	{
-		// check camera input ?
 		faceTrackProcessing();
+		Sleep(16);
 	}
 
 	return 0;
 }
-
+//Should delete a pointer and set it to NULL
 void FaceTracking::Release()
 {
 	faceTrackingResult = NULL;
 	nuiPresent = NULL;
 	ColorBuffer = NULL;
+}
+
+//------Direct2D
+
+const int sourceWidth=640;
+const int sourceHeight = 480;
+
+HRESULT FaceTracking::ensureDirect2DResources(){
+		HRESULT hr = S_OK;
+
+	if( !renderTarget )
+	{
+		D2D1_SIZE_U size = D2D1::SizeU( sourceWidth, sourceHeight);
+
+		D2D1_RENDER_TARGET_PROPERTIES rtProps = D2D1::RenderTargetProperties();
+		rtProps.pixelFormat = D2D1::PixelFormat( DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE);
+		rtProps.usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE;
+		hr = d2DFactory->CreateHwndRenderTarget(
+			rtProps,
+			D2D1::HwndRenderTargetProperties(hWnd, size),
+			&renderTarget
+			);
+
+		if ( FAILED(hr) )
+		{
+			return hr;
+		}
+
+		// Create a bitmap that we can copy image date into and then render to the target.
+		hr = renderTarget->CreateBitmap(
+			size,
+			D2D1::BitmapProperties( D2D1::PixelFormat( DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE) ),
+			&d2DcolorData
+			);
+
+		if ( FAILED(hr) )
+		{
+			SafeRelease( renderTarget );
+			return hr;
+		}
+
+
+	}
+	return hr;
 }

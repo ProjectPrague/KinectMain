@@ -161,6 +161,7 @@ protected:
 	
 //-----------------------------------------------------------------------------------------
 // Event definition. These are the methods accessed when the main
+
 public:
 	
 	void OnNMReleasedcapturekinectangle(NMHDR *pNMHDR, LRESULT *pResult)

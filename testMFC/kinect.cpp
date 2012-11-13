@@ -6,7 +6,7 @@
 #include <sstream>		//Needed for the conversion from int to String
 #include <assert.h>
 #include <comdef.h>
-
+#include <stdio.h>
 //lookups for color tinting based on player index.
 static const int intensityShiftByPlayerR[] = { 1, 2, 0, 2, 0, 0, 2, 0 };
 static const int intensityShiftByPlayerG[] = { 1, 2, 2, 0, 2, 0, 0, 1 };
@@ -141,10 +141,14 @@ void CALLBACK KinectManager::OnSensorStatusChanged( HRESULT hr, const OLECHAR* i
 //
 //	return;
 //}
+
+
 //---------------------------END OF KINECTMANAGER, START OF KINECT ----------
 Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 {
 	unInit();
+	videoBuffer = NULL;
+	faceTracker = NULL;
 	this->hWnd = hwnd;
 	this->globalNui = globalNui;
 }
@@ -152,6 +156,10 @@ Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 Kinect::~Kinect()
 {
 	unInit();
+
+	delete faceTracker;
+	faceTracker = NULL;
+
 	globalNui->NuiShutdown();
 
 	globalNui->Release();
@@ -160,23 +168,29 @@ Kinect::~Kinect()
 	//Cleaning up pointers, to prevent memory leaking
 	delete drawDepth;
 	drawDepth = NULL;
-	delete drawColor;
-	drawColor = NULL;
+
 }
 
 HRESULT Kinect::initialize()
 {
 	HRESULT hr;
 	bool result;
-
+	
 	//init Direct2D
 	D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &d2DFactory);
 
+	//init faceTracker
+	faceTracker = new FaceTracking(GetDlgItem(hWnd, 1010));
+	
 	//the three events that the kinect will throw
 	nextDepthFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
 	nextColorFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
 	nextSkeletonEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
-
+	 videoBuffer = FTCreateImage();
+    if (!videoBuffer)
+    {
+        return E_OUTOFMEMORY;
+    }
 	drawDepth = new ImageDraw();
 	result = drawDepth->Initialize( GetDlgItem( hWnd, 1011), d2DFactory, 320, 240, 320 * 4);
 	if (!result )
@@ -184,8 +198,8 @@ HRESULT Kinect::initialize()
 		// Display error regarding the depth.
 	}
 
-	drawColor = new ImageDraw();
-	result = drawColor->Initialize( GetDlgItem( hWnd, 1010 ), d2DFactory, 640, 480, 640 * 4);
+	//drawColor = new ImageDraw();
+	//result = drawColor->Initialize( GetDlgItem( hWnd, 1010 ), d2DFactory, 640, 480, 640 * 4);
 	if ( !result )
 	{
 		// Display Error regarding the color.
@@ -251,13 +265,16 @@ HRESULT Kinect::initialize()
 	{
 
 	}
+	//Init the Mutex system ( to prevent read and write on the same object simultaniously )
+	mutex = CreateMutex(NULL, FALSE,L"D2DBitMapProtector");
 
-	// FT Init beginnen
-
+	//FaceTracker Init
+	faceTracker->init(mutex);
 	// Start the processing thread
 	treadNuiProcessStop = CreateEvent( NULL, FALSE, FALSE, NULL );
 	treadNuiProcess = CreateThread ( NULL, 0, ProcessThread, this, 0, NULL);
-
+	//start the facetracker thread
+	faceTracker->startThread();
 	return hr;
 }
 
@@ -282,7 +299,7 @@ void Kinect::unInit()
 	lastSkeletonFoundTime = 0;
 	screenBlanked = false;
 	drawDepth = NULL;
-	drawColor = NULL;
+	//drawColor = NULL;
 	//trackedSkeletons = 0;
 	skeletonTrackingFlags = NUI_SKELETON_TRACKING_FLAG_ENABLE_IN_NEAR_RANGE | NUI_SKELETON_TRACKING_FLAG_ENABLE_SEATED_SUPPORT;
 	depthStreamFlags = NUI_IMAGE_STREAM_FLAG_ENABLE_NEAR_MODE;
@@ -434,8 +451,19 @@ bool Kinect::gotColorAlert()
 	{
 		//draw it to the screen.
 		//memcpy(faceTrackingColorData->GetBuffer(), PBYTE(lockedRect.pBits), min(faceTrackingColorData->GetBufferSize, UINT(texture->BufferLen()))); // <----------------------------------------------------------*********
-		drawColor->GDP( static_cast<BYTE *>(lockedRect.pBits), lockedRect.size);
+		//drawColor->GDP( static_cast<BYTE *>(lockedRect.pBits), lockedRect.size);
+		//mutex waiting, 5 ms timeout
 		bitmap->CopyFromMemory(NULL, static_cast<BYTE *>(lockedRect.pBits), 640 * 4);
+		memcpy(videoBuffer->GetBuffer(), PBYTE(lockedRect.pBits), min(videoBuffer->GetBufferSize(),UINT(texture->BufferLen())));
+		DWORD result = WaitForSingleObject(mutex,5);
+		if (result == WAIT_OBJECT_0){
+			__try {
+					faceTracker->setColorVars(lockedRect, texture);
+			}
+			__finally {
+					ReleaseMutex(mutex);
+			}
+		}
 	}
 	else
 	{
@@ -470,6 +498,16 @@ bool Kinect::gotDepthAlert()
 	NUI_LOCKED_RECT LockedRect;
 	//lock the data we are going to use, so that other threads cant change it while we are using it.
 	texture->LockRect(0, &LockedRect, NULL, 0);
+	//give the data to the face tracker
+	DWORD result = WaitForSingleObject(mutex,5);
+		if (result == WAIT_OBJECT_0){
+			__try {
+					faceTracker->setDepthVars(LockedRect, texture);
+			}
+			__finally {
+					ReleaseMutex(mutex);
+			}
+		}
 	if( 0 != LockedRect.Pitch)
 	{
 		DWORD fWidth, fHeight;
@@ -597,6 +635,7 @@ bool Kinect::gotSkeletonAlert()
 	hr = renderTarget->EndDraw( );
 
 	UpdateSkelly( sFrame );
+	return false;
 }
 
 // -------- GotSkeletonAlert's Helper Classes ---
@@ -612,7 +651,6 @@ void Kinect::blankSkeletonScreen( )
 //Draws a bone from points
 void Kinect::DrawBone( const NUI_SKELETON_DATA & skelly, NUI_SKELETON_POSITION_INDEX bone0, NUI_SKELETON_POSITION_INDEX bone1)
 {
-	ID2D1Bitmap *            bitmap;
 	NUI_SKELETON_POSITION_TRACKING_STATE bone0State = skelly.eSkeletonPositionTrackingState[bone0];
 	NUI_SKELETON_POSITION_TRACKING_STATE bone1State = skelly.eSkeletonPositionTrackingState[bone1];
 

@@ -1,20 +1,34 @@
-#include "kinect.h"
+#pragma once 
+#include "NuiApi.h"
 #include <FaceTrackLib.h>
+#include <d2d1.h>
+#include "resource.h"
+#include "Collection.h"
 
 class FaceTracking
 {
 public:
-	FaceTracking();
+	FaceTracking(HWND hwnd);
 	~FaceTracking();
 
-	HRESULT init();
-
+	HRESULT init(HANDLE mutex);
+	void setColorVars(NUI_LOCKED_RECT lockedRect, INuiFrameTexture * texture);
+	void setDepthVars(NUI_LOCKED_RECT lockedRect, INuiFrameTexture * texture);
 	bool lastTrackingSuccess;
 	bool applicationRunning;
-
+	void startThread();
 	DWORD WINAPI faceTrackingThread();
 
 private:
+	//hwnd
+	HWND hWnd;
+	//Thread
+	HANDLE thread;
+	DWORD threadId;
+	static DWORD WINAPI faceTrackingThread(PVOID lpParam);
+	DWORD WINAPI fceTrackingThread();
+	//mutex
+	HANDLE mutex;
 	// Safe release method.
 	void Release();
 
@@ -39,11 +53,20 @@ private:
 	// Sensor data for Face tracking.
 	FT_SENSOR_DATA sensorData;
 
-	// Images interfaces that hold the RGB and depth data for the facetracking.
+	// Image interfaces that hold the RGB and depth data for the facetracking.
 	IFTImage * faceTrackingDepthData;
 	IFTImage * faceTrackingColorData;
-
+	ID2D1Bitmap * d2DcolorData;
 	// buffers for the data
 	IFTImage * DepthBuffer;
 	IFTImage * ColorBuffer;
+
+	//checks if someone is writing the variables. There may only be one reading or writing
+	bool locked;
+
+	// Direct2D 
+    ID2D1Factory *           d2DFactory;
+    ID2D1HwndRenderTarget *  renderTarget;
+
+	HRESULT ensureDirect2DResources();
 };

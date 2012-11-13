@@ -1,4 +1,6 @@
 //header file for the kinect.cpp file.
+#pragma once 
+
 #include <afxwin.h>			//MFC core and standard components
 #include "windows.h"
 #include "NuiApi.h"
@@ -6,6 +8,7 @@
 #include "ImageDraw.h"
 #include "resource.h"
 #include "Collection.h"
+#include "faceTracking.h"
 
 
 class Kinect
@@ -62,9 +65,14 @@ private:
 	D2D1_POINT_2F             points[NUI_SKELETON_POSITION_COUNT];
 
 	// Draw devices
-	ImageDraw *            drawDepth;
-	ImageDraw *            drawColor;
-	ID2D1Factory *         d2DFactory;
+	ImageDraw *				drawDepth;
+	//ImageDraw *				drawColor;
+	ID2D1Factory *			d2DFactory;
+
+	//Facetracker
+	FaceTracking*			faceTracker;
+	//buffers used by the facetreacker
+	IFTImage*				videoBuffer;
 
 	// VGA bitmap
 	ID2D1Bitmap *            bitmap;
@@ -78,6 +86,9 @@ private:
 	HANDLE        nextSkeletonEvent;
 	HANDLE        depthStreamHandle;
 	HANDLE        videoStreamHandle;
+
+	//the mutex
+	HANDLE			mutex;
 
 	BYTE		depthRGBX[640*480*4];
 	DWORD       lastSkeletonFoundTime;
