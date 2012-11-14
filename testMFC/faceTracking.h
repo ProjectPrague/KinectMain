@@ -1,4 +1,5 @@
 #pragma once 
+
 #include "NuiApi.h"
 #include <FaceTrackLib.h>
 #include <d2d1.h>
@@ -8,7 +9,7 @@
 class FaceTracking
 {
 public:
-	FaceTracking(HWND hwnd);
+	FaceTracking(HWND hwnd, ID2D1Factory * d2DFactory);
 	~FaceTracking();
 
 	HRESULT init(HANDLE mutex);
@@ -57,6 +58,10 @@ private:
 	IFTImage * faceTrackingDepthData;
 	IFTImage * faceTrackingColorData;
 	ID2D1Bitmap * d2DcolorData;
+	//internal image interfaces. These are not touched by other threads
+	IFTImage * intFaceTrackingDepthData;
+	IFTImage * intFaceTrackingColorData;
+	ID2D1Bitmap * intD2DcolorData;
 	// buffers for the data
 	IFTImage * DepthBuffer;
 	IFTImage * ColorBuffer;

@@ -104,45 +104,6 @@ void CALLBACK KinectManager::OnSensorStatusChanged( HRESULT hr, const OLECHAR* i
 	OutputDebugString( L"KEIN KINECT.\r\n" );
 }
 
-//std::list<INuiSensor*> KinectManager::DiscoverList()
-//{
-//	INuiSensor * nui;
-//	int nuiCount = 0;
-//	HRESULT hr;
-//	std::list<INuiSensor *> kinectList;
-//
-//	hr = NuiGetSensorCount(&nuiCount);
-//	if ( FAILED(hr))
-//	{
-//		return kinectList;
-//	}
-//
-//	// Look at each kinect sensor
-//	for (int i = 0; i < nuiCount; i++)
-//	{
-//		// Create the sensor so we can check status, if we can't create it, move on.
-//		hr = NuiCreateSensorByIndex(i, &nui);
-//		if (FAILED(hr))
-//		{
-//			continue;
-//		}
-//
-//		// Get the status of the sensor, and if connected, then we can initialize it.
-//		hr = nui->NuiStatus();
-//		if (S_OK == hr)
-//		{
-//			nuiList.push_front(nui);
-//			break;
-//		}
-//
-//		// This sensor was not okay, so we release it (into the wild!) since we're not using it.
-//		nui->Release();
-//	}
-//
-//	return;
-//}
-
-
 //---------------------------END OF KINECTMANAGER, START OF KINECT ----------
 Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 {
@@ -177,10 +138,10 @@ HRESULT Kinect::initialize()
 	bool result;
 	
 	//init Direct2D
-	D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &d2DFactory);
+	D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, &d2DFactory);
 
 	//init faceTracker
-	faceTracker = new FaceTracking(GetDlgItem(hWnd, 1010));
+	faceTracker = new FaceTracking(GetDlgItem(hWnd, 1010), d2DFactory);
 	
 	//the three events that the kinect will throw
 	nextDepthFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
@@ -847,10 +808,6 @@ D2D1_POINT_2F Kinect::SkeletonScreen( Vector4 skeletonPoint, int width, int heig
 	// calculate the skeleton's position on the screen
 	// NuiTransformSkeletonToDepthImage returns coordinates in NUI_IMAGE_RESOLUTION_320x240 space
 	NuiTransformSkeletonToDepthImage( skeletonPoint, &x, &y, &depth);
-	std::stringstream ss;
-	ss<<x;
-	CString s(ss.str().c_str());
-	OutputDebugString(s + "\n");
 
 	float screenPointX = static_cast<float>(x * width) / screenWidth;
 	float screenPointY = static_cast<float>(y * height) / screenHeight;

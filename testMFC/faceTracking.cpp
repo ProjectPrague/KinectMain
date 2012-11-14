@@ -1,7 +1,8 @@
 #include "faceTracking.h"
 
-FaceTracking::FaceTracking(HWND hwnd)
+FaceTracking::FaceTracking(HWND hwnd, ID2D1Factory *d2DFactory)
 {
+	this -> d2DFactory = d2DFactory;
 	this->hWnd = hwnd;
 	locked = false;
 	// All variables must be NULL before the beginning.
@@ -30,20 +31,18 @@ HRESULT FaceTracking::init(HANDLE mutex)
 {
 	this->mutex = mutex;
 	HRESULT hr;
-	FT_CAMERA_CONFIG colorConfig;
-	FT_CAMERA_CONFIG depthConfig;
+	FT_CAMERA_CONFIG colorConfig = {640, 480, NUI_CAMERA_COLOR_NOMINAL_FOCAL_LENGTH_IN_PIXELS};
+	FT_CAMERA_CONFIG depthConfig = {320, 240, NUI_CAMERA_DEPTH_NOMINAL_FOCAL_LENGTH_IN_PIXELS};;
 	faceTracker = FTCreateFaceTracker(NULL);
-	// try to start the face tracker.
+
+	//VideoConfig(&colorConfig);
+	//DepthVideoConfig(&depthConfig);	
+
+	//initializes the face tracker.
 	hr = faceTracker->Initialize(&colorConfig, &depthConfig, NULL, NULL);
-	if (SUCCEEDED(hr))
+	if (FAILED(hr))
 	{
-		VideoConfig(&colorConfig);
-		DepthVideoConfig(&depthConfig);
-		nuiPresent = TRUE;
-	}
-	else
-	{
-		nuiPresent = false;
+
 	}
 
 	// create instance of the face tracker.
@@ -57,6 +56,7 @@ HRESULT FaceTracking::init(HANDLE mutex)
 	hr = faceTracker->Initialize(&colorConfig, &depthConfig, NULL, NULL);
 	if( FAILED(hr))
 	{
+		OutputDebugString(L"Test, niggah.");
 		// error for initializing of faceTracker.
 	}
 
@@ -69,18 +69,27 @@ HRESULT FaceTracking::init(HANDLE mutex)
 	faceTrackingColorData = FTCreateImage();
 	if(!faceTrackingColorData || FAILED(hr = faceTrackingColorData->Allocate(colorConfig.Height, colorConfig.Width, FTIMAGEFORMAT_UINT8_X8R8G8B8)))
 	{
+		OutputDebugString(L"Here");
 		// return an ERRORWOZOZZZ.
 	}
 	faceTrackingDepthData = FTCreateImage();
+	if(!faceTrackingDepthData || FAILED(hr = faceTrackingDepthData->Allocate(depthConfig.Width, depthConfig.Height, FTIMAGEFORMAT_UINT16_D13P3)))
+	{OutputDebugString(L"Here");
+	// return an error
+	}
+	intFaceTrackingColorData = FTCreateImage();
+	if(!faceTrackingColorData || FAILED(hr = faceTrackingColorData->Allocate(colorConfig.Height, colorConfig.Width, FTIMAGEFORMAT_UINT8_X8R8G8B8)))
+	{
+		// return an ERRORWOZOZZZ.
+	}
+	intFaceTrackingDepthData = FTCreateImage();
 	if(!faceTrackingDepthData || FAILED(hr = faceTrackingDepthData->Allocate(depthConfig.Width, depthConfig.Height, FTIMAGEFORMAT_UINT16_D13P3)))
 	{
 		// return an error
 	}
 	//Direct2D
-	D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &d2DFactory);
-	d2DFactory->AddRef();
 	ensureDirect2DResources();
-			
+
 	lastTrackingSuccess = false;
 	return 0;
 }
@@ -132,40 +141,53 @@ HRESULT FaceTracking::DepthVideoConfig(FT_CAMERA_CONFIG* dConfig)
 	FLOAT focus = 0.f;
 
 	if(width == 320 && height == 240)
-    {
-        focus = NUI_CAMERA_DEPTH_NOMINAL_FOCAL_LENGTH_IN_PIXELS;
-    }
-    else if(width == 640 && height == 480)
-    {
-        focus = NUI_CAMERA_DEPTH_NOMINAL_FOCAL_LENGTH_IN_PIXELS * 2.f;
-    }
-        
-    if(focus == 0.f)
-    {
-        return E_UNEXPECTED;
-    }
+	{
+		focus = NUI_CAMERA_DEPTH_NOMINAL_FOCAL_LENGTH_IN_PIXELS;
+	}
+	else if(width == 640 && height == 480)
+	{
+		focus = NUI_CAMERA_DEPTH_NOMINAL_FOCAL_LENGTH_IN_PIXELS * 2.f;
+	}
+
+	if(focus == 0.f)
+	{
+		return E_UNEXPECTED;
+	}
 
 	dConfig->FocalLength = focus;
-    dConfig->Width = width;
-    dConfig->Height = height;
+	dConfig->Width = width;
+	dConfig->Height = height;
 
-    return S_OK;
+	return S_OK;
 }
 
 void FaceTracking::faceTrackProcessing()
 {
+	ensureDirect2DResources();
 	HRESULT hrFT = E_FAIL;
 	DWORD result = WaitForSingleObject(mutex,INFINITE);
 	//create local copies of the objects to prevent a lock that takes extremly long
 	if (result == WAIT_OBJECT_0){
 		__try {
-			renderTarget->BeginDraw();
-			renderTarget->DrawBitmap(d2DcolorData);
-			renderTarget->EndDraw();
+			HRESULT hrCopy = faceTrackingColorData->CopyTo(intFaceTrackingColorData, NULL, 0, 0);
+			if (SUCCEEDED(hrCopy) )
+			{
+				OutputDebugString(L"TEMP");
+			}
+			hrCopy = faceTrackingDepthData->CopyTo(intFaceTrackingDepthData, NULL, 0, 0);
+			hrCopy = intD2DcolorData->CopyFromBitmap(NULL,d2DcolorData,NULL);
+			if (FAILED(hrCopy)){
+				OutputDebugString(L"FOUT");
+			}
+
 		}
 		__finally {
 			ReleaseMutex(mutex);
 		}
+		renderTarget->BeginDraw();
+		renderTarget->DrawBitmap(intD2DcolorData);
+		renderTarget->EndDraw();
+
 	}	
 }
 DWORD WINAPI FaceTracking::faceTrackingThread(PVOID lpParam){
@@ -201,7 +223,7 @@ const int sourceWidth=640;
 const int sourceHeight = 480;
 
 HRESULT FaceTracking::ensureDirect2DResources(){
-		HRESULT hr = S_OK;
+	HRESULT hr = S_OK;
 
 	if( !renderTarget )
 	{
@@ -226,6 +248,11 @@ HRESULT FaceTracking::ensureDirect2DResources(){
 			size,
 			D2D1::BitmapProperties( D2D1::PixelFormat( DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE) ),
 			&d2DcolorData
+			);
+		hr = renderTarget->CreateBitmap(
+			size,
+			D2D1::BitmapProperties( D2D1::PixelFormat( DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE) ),
+			&intD2DcolorData
 			);
 
 		if ( FAILED(hr) )
