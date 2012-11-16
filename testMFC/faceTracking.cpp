@@ -32,8 +32,9 @@ HRESULT FaceTracking::init(HANDLE mutex)
 	this->mutex = mutex;
 	HRESULT hr;
 	FT_CAMERA_CONFIG colorConfig = {640, 480, NUI_CAMERA_COLOR_NOMINAL_FOCAL_LENGTH_IN_PIXELS};
-	FT_CAMERA_CONFIG depthConfig = {320, 240, NUI_CAMERA_DEPTH_NOMINAL_FOCAL_LENGTH_IN_PIXELS};;
+	FT_CAMERA_CONFIG depthConfig = {320, 240, NUI_CAMERA_DEPTH_NOMINAL_FOCAL_LENGTH_IN_PIXELS};
 	faceTracker = FTCreateFaceTracker(NULL);
+	DWORD width = 0, height = 0;
 
 	//VideoConfig(&colorConfig);
 	//DepthVideoConfig(&depthConfig);	
@@ -74,19 +75,25 @@ HRESULT FaceTracking::init(HANDLE mutex)
 	}
 	faceTrackingDepthData = FTCreateImage();
 	if(!faceTrackingDepthData || FAILED(hr = faceTrackingDepthData->Allocate(depthConfig.Width, depthConfig.Height, FTIMAGEFORMAT_UINT16_D13P3)))
-	{OutputDebugString(L"Here");
-	// return an error
+	{
+		OutputDebugString(L"Here");
+	
 	}
-	intFaceTrackingColorData = FTCreateImage();
-	if(!faceTrackingColorData || FAILED(hr = faceTrackingColorData->Allocate(colorConfig.Height, colorConfig.Width, FTIMAGEFORMAT_UINT8_X8R8G8B8)))
+
+	ColorBuffer = FTCreateImage();
+	if(!ColorBuffer || FAILED(hr = ColorBuffer->Allocate(colorConfig.Height, colorConfig.Width, FTIMAGEFORMAT_UINT8_X8R8G8B8)))
 	{
 		// return an ERRORWOZOZZZ.
 	}
-	intFaceTrackingDepthData = FTCreateImage();
-	if(!faceTrackingDepthData || FAILED(hr = faceTrackingDepthData->Allocate(depthConfig.Width, depthConfig.Height, FTIMAGEFORMAT_UINT16_D13P3)))
+
+	//NuiImageResolutionToSize( NUI_IMAGE_RESOLUTION_640x480, width, height);
+
+	DepthBuffer = FTCreateImage();
+	if(!DepthBuffer || FAILED(hr = DepthBuffer->Allocate(depthConfig.Height, depthConfig.Width, FTIMAGEFORMAT_UINT8_X8R8G8B8)))
 	{
 		// return an error
 	}
+	 
 	//Direct2D
 	ensureDirect2DResources();
 
@@ -163,22 +170,26 @@ HRESULT FaceTracking::DepthVideoConfig(FT_CAMERA_CONFIG* dConfig)
 
 void FaceTracking::faceTrackProcessing()
 {
+	int i = 0;
 	ensureDirect2DResources();
 	HRESULT hrFT = E_FAIL;
 	DWORD result = WaitForSingleObject(mutex,INFINITE);
 	//create local copies of the objects to prevent a lock that takes extremly long
 	if (result == WAIT_OBJECT_0){
 		__try {
-			HRESULT hrCopy = faceTrackingColorData->CopyTo(intFaceTrackingColorData, NULL, 0, 0);
-			if (SUCCEEDED(hrCopy) )
+			HRESULT hrCopy = faceTrackingColorData->CopyTo(ColorBuffer, NULL, 0, 0);
+ 			if (FAILED(hrCopy) )
 			{
-				OutputDebugString(L"TEMP");
+				OutputDebugString(L"ColorData copy error.\n");
 			}
-			hrCopy = faceTrackingDepthData->CopyTo(intFaceTrackingDepthData, NULL, 0, 0);
+			hrCopy = faceTrackingDepthData->CopyTo(DepthBuffer, NULL, 0, 0);
+			if (FAILED(hrCopy))
+			{
+				OutputDebugString(L"DepthData copy error");
+				
+			}
 			hrCopy = intD2DcolorData->CopyFromBitmap(NULL,d2DcolorData,NULL);
-			if (FAILED(hrCopy)){
-				OutputDebugString(L"FOUT");
-			}
+
 
 		}
 		__finally {
