@@ -183,7 +183,7 @@ void FaceTracking::faceTrackProcessing()
 				hrCopy = faceTrackingDepthData->CopyTo(DepthBuffer, NULL, 0, 0);
 				if (FAILED(hrCopy))
 				{
-					OutputDebugString(L"DepthData copy error");
+					//OutputDebugString(L"DepthData copy error");
 				}
 			}
 

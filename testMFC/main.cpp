@@ -28,24 +28,24 @@ class MAINFORM: public CDialog
 {
 private:
 	std::map<int, BSTR> kinectMap;
-	
+
 
 public:
-    MAINFORM(CWnd* pParent = NULL): CDialog(MAINFORM::IDD, pParent)
-    {    }
-    // Dialog Data, name of dialog form
-    enum{IDD = MainWindow};
+	MAINFORM(CWnd* pParent = NULL): CDialog(MAINFORM::IDD, pParent)
+	{    }
+	// Dialog Data, name of dialog form
+	enum{IDD = MainWindow};
 protected:
-    virtual void DoDataExchange(CDataExchange* pDX) { CDialog::DoDataExchange(pDX); }
-    //Called right after constructor. Initialize things here.
-    virtual BOOL OnInitDialog() 
-    {             
-			initializePointers();
-			initializeKinect();
-			initializeInterface();
-			CDialog::OnInitDialog();
-            return true; 
-    }
+	virtual void DoDataExchange(CDataExchange* pDX) { CDialog::DoDataExchange(pDX); }
+	//Called right after constructor. Initialize things here.
+	virtual BOOL OnInitDialog() 
+	{             
+		initializePointers();
+		initializeKinect();
+		initializeInterface();
+		CDialog::OnInitDialog();
+		return true; 
+	}
 
 	void initializePointers()
 	{
@@ -86,8 +86,15 @@ protected:
 				ss << i;
 				CString text = ss.str().c_str();
 				MFC_cbKinectList->AddString(L"Kinect "+text);
-				kinectMap[i] = (*it)->NuiDeviceConnectionId();
+				kinectMap[i] = (*it)->NuiUniqueId();//NuiDeviceConnectionId();
 				CString textJeMoeder = (LPCTSTR) (*it)->NuiUniqueId();
+				CString textJeZus = (LPCTSTR) (*it)->NuiDeviceConnectionId();
+				CString textJeVader;
+				textJeVader.Format(_T("%d"), i);
+				OutputDebugString(textJeMoeder);
+				OutputDebugString(L"----");
+				OutputDebugString(textJeVader);
+				OutputDebugString(L"\n");
 			}
 			MFC_cbKinectList->SetCurSel(0);
 		} else {
@@ -146,7 +153,7 @@ protected:
 		kinect->setKinectAngle(sliderAngle);
 
 		// After setting the kinect angle, update the current value from the kinect.
-		
+
 		std::stringstream ss;
 		kinectAngle = kinect->getKinectAngle();
 		ss << kinectAngle; // Value comes from the kinect.
@@ -159,22 +166,22 @@ protected:
 		MFC_scKINECTANGLE->SetRange(-27, 27, TRUE);
 		return 0;
 	}
-	
-//-----------------------------------------------------------------------------------------
-// Event definition. These are the methods accessed when the main
+
+	//-----------------------------------------------------------------------------------------
+	// Event definition. These are the methods accessed when the main
 
 public:
-	
+
 	void OnNMReleasedcapturekinectangle(NMHDR *pNMHDR, LRESULT *pResult)
 	{
 		std::stringstream ss;
-		
+
 		sliderAngle = MFC_scKINECTANGLE->GetPos() * -1;
 		ss << sliderAngle;
 		CString text = ss.str().c_str();
 		MFC_ecNEWVAL->SetWindowText(text);
 		*pResult = 0;
-		
+
 	}
 
 	void OnBnClickedsetval()
@@ -187,32 +194,40 @@ public:
 		//If the value from this slider differs from the current kinect value, set it by starting a Thread for doing this.
 		DWORD threadID;
 		HANDLE thread = CreateThread(NULL, 0, setKinectAngle, this, 0, &threadID);
-		
+
 	}
 
-// declares the message map
-DECLARE_MESSAGE_MAP()
+	void OnCbnSelchangeKinectlist()
+	{
+		//CString textJeMoeder = (LPCTSTR) ;
+		
+		OutputDebugString(L"Selection changed!");
+	}
+
+	// declares the message map
+	DECLARE_MESSAGE_MAP()
 };
 //-----------------------------------------------------------------------------------------
 class AppStart : public CWinApp
 {
 public:
-AppStart() {  }
+	AppStart() {  }
 public:
-virtual BOOL InitInstance()
-{
-   CWinApp::InitInstance();
-   MAINFORM dlg;
-   m_pMainWnd = &dlg;
-   INT_PTR nResponse = dlg.DoModal();
-   return FALSE;
-} //close function
+	virtual BOOL InitInstance()
+	{
+		CWinApp::InitInstance();
+		MAINFORM dlg;
+		m_pMainWnd = &dlg;
+		INT_PTR nResponse = dlg.DoModal();
+		return FALSE;
+	} //close function
 };
 //-----------------------------------------------------------------------------------------
 //Need a Message Map Macro for both CDialog and CWinApp
 BEGIN_MESSAGE_MAP(MAINFORM, CDialog)	
 	ON_NOTIFY(NM_RELEASEDCAPTURE, SC_kinectAngle, &MAINFORM::OnNMReleasedcapturekinectangle)	
 	ON_BN_CLICKED(B_setVal, &MAINFORM::OnBnClickedsetval)
+	ON_CBN_SELCHANGE(CB_KinectList, &MAINFORM::OnCbnSelchangeKinectlist)
 END_MESSAGE_MAP()
 //-----------------------------------------------------------------------------------------
 AppStart theApp;  //Starts the Application

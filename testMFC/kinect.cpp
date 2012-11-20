@@ -85,7 +85,6 @@ Kinect * KinectManager::selectKinect(CString selected)
 	{
 		// converts the NuiUnique Id.
 		CString convert = (LPCTSTR) (*it)->NuiUniqueId();
-
 		//if the unique ID is the same as the selected kinect, initialize and return it.
 		if(convert.Compare(selected) != 0)
 		{
