@@ -81,6 +81,7 @@ protected:
 		if (nuiList.size() > 0){
 			for (std::list<INuiSensor*>::const_iterator it = nuiList.begin();it != nuiList.end();++it,i++)
 			{
+				ss.str(std::string());
 				ss.clear();
 				ss << i;
 				CString text = ss.str().c_str();

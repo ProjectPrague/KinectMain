@@ -9,6 +9,7 @@ FaceTracking::FaceTracking(HWND hwnd, ID2D1Factory *d2DFactory)
 	faceTrackingResult = NULL;
 	nuiPresent = NULL;
 	ColorBuffer = NULL;
+	DepthBuffer = NULL;
 	renderTarget = NULL;
 }
 
@@ -62,7 +63,7 @@ HRESULT FaceTracking::init(HANDLE mutex)
 	}
 
 	hr = faceTracker->CreateFTResult(&faceTrackingResult);
-	if( FAILED(hr))
+	if( FAILED(hr)) 
 	{
 		// error for interface.
 	}
@@ -70,14 +71,12 @@ HRESULT FaceTracking::init(HANDLE mutex)
 	faceTrackingColorData = FTCreateImage();
 	if(!faceTrackingColorData || FAILED(hr = faceTrackingColorData->Allocate(colorConfig.Height, colorConfig.Width, FTIMAGEFORMAT_UINT8_X8R8G8B8)))
 	{
-		OutputDebugString(L"Here");
 		// return an ERRORWOZOZZZ.
 	}
 	faceTrackingDepthData = FTCreateImage();
 	if(!faceTrackingDepthData || FAILED(hr = faceTrackingDepthData->Allocate(depthConfig.Width, depthConfig.Height, FTIMAGEFORMAT_UINT16_D13P3)))
 	{
-		OutputDebugString(L"Here");
-	
+
 	}
 
 	ColorBuffer = FTCreateImage();
@@ -89,11 +88,11 @@ HRESULT FaceTracking::init(HANDLE mutex)
 	//NuiImageResolutionToSize( NUI_IMAGE_RESOLUTION_640x480, width, height);
 
 	DepthBuffer = FTCreateImage();
-	if(!DepthBuffer || FAILED(hr = DepthBuffer->Allocate(depthConfig.Height, depthConfig.Width, FTIMAGEFORMAT_UINT8_X8R8G8B8)))
+	if(!DepthBuffer || FAILED(hr = DepthBuffer->Allocate(depthConfig.Height, depthConfig.Width, FTIMAGEFORMAT_UINT16_D13P3)))
 	{
 		// return an error
 	}
-	 
+
 	//Direct2D
 	ensureDirect2DResources();
 
@@ -105,6 +104,7 @@ void FaceTracking::startThread(){
 	thread = CreateThread(0,NULL,faceTrackingThread, this, 0,&threadId);
 }
 
+/* 
 HRESULT FaceTracking::VideoConfig(FT_CAMERA_CONFIG* config)
 {
 	if(!config)
@@ -166,7 +166,7 @@ HRESULT FaceTracking::DepthVideoConfig(FT_CAMERA_CONFIG* dConfig)
 	dConfig->Height = height;
 
 	return S_OK;
-}
+} */ // Commented config out.
 
 void FaceTracking::faceTrackProcessing()
 {
@@ -174,23 +174,20 @@ void FaceTracking::faceTrackProcessing()
 	ensureDirect2DResources();
 	HRESULT hrFT = E_FAIL;
 	DWORD result = WaitForSingleObject(mutex,INFINITE);
-	//create local copies of the objects to prevent a lock that takes extremly long
+	//create local copies of the objects to prevent a lock that takes extremely long
 	if (result == WAIT_OBJECT_0){
 		__try {
 			HRESULT hrCopy = faceTrackingColorData->CopyTo(ColorBuffer, NULL, 0, 0);
- 			if (FAILED(hrCopy) )
+			if (SUCCEEDED(hrCopy) && DepthBuffer)
 			{
-				OutputDebugString(L"ColorData copy error.\n");
+				hrCopy = faceTrackingDepthData->CopyTo(DepthBuffer, NULL, 0, 0);
+				if (FAILED(hrCopy))
+				{
+					OutputDebugString(L"DepthData copy error");
+				}
 			}
-			hrCopy = faceTrackingDepthData->CopyTo(DepthBuffer, NULL, 0, 0);
-			if (FAILED(hrCopy))
-			{
-				OutputDebugString(L"DepthData copy error");
-				
-			}
+
 			hrCopy = intD2DcolorData->CopyFromBitmap(NULL,d2DcolorData,NULL);
-
-
 		}
 		__finally {
 			ReleaseMutex(mutex);
@@ -226,6 +223,7 @@ void FaceTracking::Release()
 	faceTrackingResult = NULL;
 	nuiPresent = NULL;
 	ColorBuffer = NULL;
+	DepthBuffer = NULL;
 }
 
 //------Direct2D

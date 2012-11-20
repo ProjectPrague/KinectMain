@@ -65,7 +65,6 @@ HRESULT KinectManager::initialize(HWND hWnd)
 		if (S_OK == hr)
 		{
 			nuiList.push_front(nui);
-			break;
 		}
 
 		// This sensor was not okay, so we release it (into the wild!) since we're not using it.
@@ -112,6 +111,7 @@ Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 	faceTracker = NULL;
 	this->hWnd = hwnd;
 	this->globalNui = globalNui;
+	
 }
 
 Kinect::~Kinect()
@@ -147,8 +147,10 @@ HRESULT Kinect::initialize()
 	nextDepthFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
 	nextColorFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
 	nextSkeletonEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
-	 videoBuffer = FTCreateImage();
-    if (!videoBuffer)
+	videoBuffer = FTCreateImage();
+	// depthBuffer = FTCreateImage();                                             <------------------------------ ?
+    
+	if (!videoBuffer)
     {
         return E_OUTOFMEMORY;
     }
