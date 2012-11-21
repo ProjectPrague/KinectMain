@@ -85,6 +85,7 @@ Kinect * KinectManager::selectKinect(CString selected)
 	{
 		// converts the NuiUnique Id.
 		CString convert = (LPCTSTR) (*it)->NuiUniqueId();
+		OutputDebugString(convert);
 		//if the unique ID is the same as the selected kinect, initialize and return it.
 		if(convert.Compare(selected) != 0)
 		{
@@ -105,9 +106,29 @@ void CALLBACK KinectManager::OnSensorStatusChanged( HRESULT hr, const OLECHAR* i
 //---------------------------END OF KINECTMANAGER, START OF KINECT ----------
 Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 {
-	unInit();
+	renderTarget = NULL;
+	brushJointTracked = NULL;
+	brushJointInferred = NULL;
+	brushBoneTracked = NULL;
+	brushBoneInferred = NULL;
+	ZeroMemory(points,sizeof(points));
+
+	nextDepthFrameEvent = NULL;
+	nextColorFrameEvent = NULL;
+	nextSkeletonEvent = NULL;
+	depthStreamHandle = NULL;
+	videoStreamHandle = NULL;
+	lastSkeletonFoundTime = 0;
+	screenBlanked = false;
+	drawDepth = NULL;
+	//drawColor = NULL;
+	//trackedSkeletons = 0;
+	skeletonTrackingFlags = /*NUI_SKELETON_TRACKING_FLAG_ENABLE_IN_NEAR_RANGE  | */NUI_SKELETON_TRACKING_FLAG_ENABLE_SEATED_SUPPORT;
+	depthStreamFlags = NUI_IMAGE_STREAM_FLAG_ENABLE_NEAR_MODE;
+	ZeroMemory(stickySkeletonId,sizeof(stickySkeletonId));
 	videoBuffer = NULL;
 	faceTracker = NULL;
+
 	this->hWnd = hwnd;
 	this->globalNui = globalNui;
 	
@@ -115,20 +136,49 @@ Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 
 Kinect::~Kinect()
 {
-	unInit();
+	//unInit();
+
+		if ( NULL != treadNuiProcessStop)
+	{
+		SetEvent(treadNuiProcessStop);
+		
+		if( NULL != treadNuiProcess)
+		{
+			WaitForSingleObject(treadNuiProcess, 1000);
+			CloseHandle( treadNuiProcess);
+		}
+		treadNuiProcess = 0;
+		CloseHandle(treadNuiProcessStop);
+	}
+
+		SafeRelease( globalNui );
+
+	renderTarget = NULL;
+	brushJointTracked = NULL;
+	brushJointInferred = NULL;
+	brushBoneTracked = NULL;
+	brushBoneInferred = NULL;
+	ZeroMemory(points,sizeof(points));
+
+	nextDepthFrameEvent = NULL;
+	nextColorFrameEvent = NULL;
+	nextSkeletonEvent = NULL;
+	depthStreamHandle = NULL;
+	videoStreamHandle = NULL;
+	lastSkeletonFoundTime = 0;
+	screenBlanked = false;
+	//drawColor = NULL;
+	//trackedSkeletons = 0;
+	skeletonTrackingFlags = /*NUI_SKELETON_TRACKING_FLAG_ENABLE_IN_NEAR_RANGE  | */NUI_SKELETON_TRACKING_FLAG_ENABLE_SEATED_SUPPORT;
+	depthStreamFlags = NUI_IMAGE_STREAM_FLAG_ENABLE_NEAR_MODE;
+	ZeroMemory(stickySkeletonId,sizeof(stickySkeletonId));
 
 	delete faceTracker;
 	faceTracker = NULL;
 
-	globalNui->NuiShutdown();
-
-	globalNui->Release();
-	globalNui = NULL;
-
 	//Cleaning up pointers, to prevent memory leaking
 	delete drawDepth;
 	drawDepth = NULL;
-
 }
 
 HRESULT Kinect::initialize()
@@ -225,7 +275,13 @@ HRESULT Kinect::initialize()
 	// error toevoegen voor de depth stream 
 	if ( FAILED(hr) )
 	{
-
+		hr = globalNui->NuiImageStreamOpen( 
+		HasSkeletalEngine(globalNui) ? NUI_IMAGE_TYPE_DEPTH_AND_PLAYER_INDEX : NUI_IMAGE_TYPE_DEPTH,
+		NUI_IMAGE_RESOLUTION_320x240,
+		NUI_IMAGE_FRAME_FLAG_NONE,
+		2,
+		nextDepthFrameEvent,
+		&depthStreamHandle );
 	}
 	//Init the Mutex system ( to prevent read and write on the same object simultaniously )
 	mutex = CreateMutex(NULL, FALSE,L"D2DBitMapProtector");
@@ -240,33 +296,45 @@ HRESULT Kinect::initialize()
 	return hr;
 }
 
-void Kinect::unInit()
-{
-	//SafeRelease( globalNui );
-
-	renderTarget = NULL;
-	brushJointTracked = NULL;
-	brushJointInferred = NULL;
-	brushBoneTracked = NULL;
-	brushBoneInferred = NULL;
-	ZeroMemory(points,sizeof(points));
-
-	nextDepthFrameEvent = NULL;
-	nextColorFrameEvent = NULL;
-	nextSkeletonEvent = NULL;
-	depthStreamHandle = NULL;
-	videoStreamHandle = NULL;
-	//treadNuiProcess = NULL;
-	//treadNuiProcessStop = NULL;
-	lastSkeletonFoundTime = 0;
-	screenBlanked = false;
-	drawDepth = NULL;
-	//drawColor = NULL;
-	//trackedSkeletons = 0;
-	skeletonTrackingFlags = NUI_SKELETON_TRACKING_FLAG_ENABLE_IN_NEAR_RANGE | NUI_SKELETON_TRACKING_FLAG_ENABLE_SEATED_SUPPORT;
-	depthStreamFlags = NUI_IMAGE_STREAM_FLAG_ENABLE_NEAR_MODE;
-	ZeroMemory(stickySkeletonId,sizeof(stickySkeletonId));
-}
+//void Kinect::unInit()
+//{
+//	if ( NULL != treadNuiProcessStop)
+//	{
+//		SetEvent(treadNuiProcessStop);
+//		
+//		if( NULL != treadNuiProcess)
+//		{
+//			WaitForSingleObject( treadNuiProcess, INFINITE);
+//			CloseHandle( treadNuiProcess);
+//		}
+//		CloseHandle(treadNuiProcessStop);
+//	}
+//
+//	faceTracker->applicationRunning = false;
+//
+//	SafeRelease( globalNui );
+//
+//	renderTarget = NULL;
+//	brushJointTracked = NULL;
+//	brushJointInferred = NULL;
+//	brushBoneTracked = NULL;
+//	brushBoneInferred = NULL;
+//	ZeroMemory(points,sizeof(points));
+//
+//	nextDepthFrameEvent = NULL;
+//	nextColorFrameEvent = NULL;
+//	nextSkeletonEvent = NULL;
+//	depthStreamHandle = NULL;
+//	videoStreamHandle = NULL;
+//	lastSkeletonFoundTime = 0;
+//	screenBlanked = false;
+//	drawDepth = NULL;
+//	//drawColor = NULL;
+//	//trackedSkeletons = 0;
+//	skeletonTrackingFlags = /*NUI_SKELETON_TRACKING_FLAG_ENABLE_IN_NEAR_RANGE  | */NUI_SKELETON_TRACKING_FLAG_ENABLE_SEATED_SUPPORT;
+//	depthStreamFlags = NUI_IMAGE_STREAM_FLAG_ENABLE_NEAR_MODE;
+//	ZeroMemory(stickySkeletonId,sizeof(stickySkeletonId));
+//}
 
 // Thread to handle Kinect processing, calls class instance thread processor.
 DWORD WINAPI Kinect::ProcessThread( LPVOID param )		// LPVOID is a VOID LONG POINTER -> a pointer to an unspecified type and you
@@ -307,6 +375,11 @@ DWORD WINAPI Kinect::ProcessThread()
 	{
 		// wait for any of the events
 		eventIdx = WaitForMultipleObjects( numEvents, handleEvents, FALSE, 100);
+
+			CString text;
+			text.Format(_T("%d"), eventIdx);
+			OutputDebugString(text);
+			OutputDebugString(L"\n");
 
 		// timed out, continue
 		if ( eventIdx == WAIT_TIMEOUT)

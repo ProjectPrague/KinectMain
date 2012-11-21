@@ -15,6 +15,12 @@ FaceTracking::FaceTracking(HWND hwnd, ID2D1Factory *d2DFactory)
 
 FaceTracking::~FaceTracking()
 {
+	applicationRunning = false;
+	if(thread)
+	{
+		WaitForSingleObject(thread, 1000);
+	}
+	thread = 0;
 	SafeRelease(renderTarget);
 	// destruct all variables to NULL before shutting down.
 }

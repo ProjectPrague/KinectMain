@@ -22,7 +22,7 @@ CStatic * MFC_ecFPSCOLOR, * MFC_ecDEPTHCOLOR, * MFC_pcSKELETON;
 KinectManager * kinectManager;
 Kinect * kinect;
 std::list<INuiSensor*> nuiList;
-int sliderAngle, kinectAngle;
+int sliderAngle, kinectAngle, currentSelection;
 
 class MAINFORM: public CDialog
 {
@@ -86,9 +86,8 @@ protected:
 				ss << i;
 				CString text = ss.str().c_str();
 				MFC_cbKinectList->AddString(L"Kinect "+text);
-				kinectMap[i] = (*it)->NuiUniqueId();//NuiDeviceConnectionId();
+				kinectMap[i] = (*it)->NuiUniqueId();
 				CString textJeMoeder = (LPCTSTR) (*it)->NuiUniqueId();
-				CString textJeZus = (LPCTSTR) (*it)->NuiDeviceConnectionId();
 				CString textJeVader;
 				textJeVader.Format(_T("%d"), i);
 				OutputDebugString(textJeMoeder);
@@ -97,6 +96,7 @@ protected:
 				OutputDebugString(L"\n");
 			}
 			MFC_cbKinectList->SetCurSel(0);
+			currentSelection = 0;
 		} else {
 			//if there is no kinect
 			//disable usable GUI elements
@@ -138,9 +138,12 @@ protected:
 		kinectManager = new KinectManager;
 		kinectManager->initialize(this->GetSafeHwnd());
 		nuiList = kinectManager->getGlobalNuiList();
+			
 		if (nuiList.size() > 0){
-			kinect = kinectManager->selectKinect((LPCTSTR) kinectMap[0]);
+			kinect = kinectManager->selectKinect((LPCTSTR) nuiList.front()->NuiUniqueId() );
+			OutputDebugString(L"YOLO = Young Obeying Satan's orders.");
 		}
+		
 	}
 
 	static DWORD WINAPI setKinectAngle(LPVOID args){
@@ -190,7 +193,6 @@ public:
 			return;
 		}
 
-
 		//If the value from this slider differs from the current kinect value, set it by starting a Thread for doing this.
 		DWORD threadID;
 		HANDLE thread = CreateThread(NULL, 0, setKinectAngle, this, 0, &threadID);
@@ -199,9 +201,19 @@ public:
 
 	void OnCbnSelchangeKinectlist()
 	{
-		//CString textJeMoeder = (LPCTSTR) ;
+		int changedSelection = MFC_cbKinectList->GetCurSel();
+		CString text;
+		text.Format(_T("%d"), changedSelection);
+		OutputDebugString(text);
+		if(changedSelection != currentSelection)
+		{
+			OutputDebugString(L"Selection changed!");
+			delete kinect;
+			kinect = NULL;
+			kinectManager->selectKinect((LPCTSTR) kinectMap[changedSelection]);
+			currentSelection = changedSelection;
+		}
 		
-		OutputDebugString(L"Selection changed!");
 	}
 
 	// declares the message map
