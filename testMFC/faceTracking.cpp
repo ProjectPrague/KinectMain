@@ -74,7 +74,7 @@ HRESULT FaceTracking::init(HANDLE mutex)
 		// return an ERRORWOZOZZZ.
 	}
 	faceTrackingDepthData = FTCreateImage();
-	if(!faceTrackingDepthData || FAILED(hr = faceTrackingDepthData->Allocate(depthConfig.Width, depthConfig.Height, FTIMAGEFORMAT_UINT16_D13P3)))
+	if(!faceTrackingDepthData || FAILED(hr = faceTrackingDepthData->Allocate(depthConfig.Height, depthConfig.Width, FTIMAGEFORMAT_UINT16_D13P3)))
 	{
 
 	}
@@ -173,11 +173,12 @@ void FaceTracking::faceTrackProcessing()
 	int i = 0;
 	ensureDirect2DResources();
 	HRESULT hrFT = E_FAIL;
+	HRESULT hrCopy = E_FAIL;
 	DWORD result = WaitForSingleObject(mutex,INFINITE);
 	//create local copies of the objects to prevent a lock that takes extremely long
 	if (result == WAIT_OBJECT_0){
 		__try {
-			HRESULT hrCopy = faceTrackingColorData->CopyTo(ColorBuffer, NULL, 0, 0);
+			hrCopy = faceTrackingColorData->CopyTo(ColorBuffer, NULL, 0, 0);
 			if (SUCCEEDED(hrCopy) && DepthBuffer)
 			{
 				hrCopy = faceTrackingDepthData->CopyTo(DepthBuffer, NULL, 0, 0);
@@ -187,10 +188,15 @@ void FaceTracking::faceTrackProcessing()
 				}
 			}
 
-			hrCopy = intD2DcolorData->CopyFromBitmap(NULL,d2DcolorData,NULL);
+			intD2DcolorData->CopyFromBitmap(NULL,d2DcolorData,NULL);
 		}
 		__finally {
 			ReleaseMutex(mutex);
+		}
+		//start with the face tracking
+		if (SUCCEEDED(hrCopy)){ //If this one is true, both the DepthBuffer and the ColorBuffer are filled whithout errors
+			POINT ptt = {0,0};
+			FT_SENSOR_DATA sensorData(ColorBuffer,DepthBuffer,1.0f,&ptt);
 		}
 		renderTarget->BeginDraw();
 		renderTarget->DrawBitmap(intD2DcolorData);
