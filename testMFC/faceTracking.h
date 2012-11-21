@@ -5,6 +5,7 @@
 #include <d2d1.h>
 #include "resource.h"
 #include "Collection.h"
+#include <math.h>
 
 class FaceTracking
 {
@@ -15,6 +16,8 @@ public:
 	HRESULT init(HANDLE mutex);
 	void setColorVars(NUI_LOCKED_RECT lockedRect, INuiFrameTexture * texture);
 	void setDepthVars(NUI_LOCKED_RECT lockedRect, INuiFrameTexture * texture);
+	void setFaceTrackingVars(FT_VECTOR3D hint[2]);
+	void setTrackBool(bool b);
 	bool lastTrackingSuccess;
 	bool applicationRunning;
 	void startThread();
@@ -44,6 +47,27 @@ private:
 
 	// for the video processing.
 	void FaceTracking::faceTrackProcessing();
+	
+	//STRUCT edgeHashTable, to save converted 3d points
+	struct EdgeHashTable
+	{
+		UINT32* pEdges;
+		UINT edgesAlloc;
+
+		void Insert(int a, int b) 
+		{
+			UINT32 v = (min(a, b) << 16) | max(a, b);
+			UINT32 index = (v + (v << 8)) * 49157, i;
+			for (i = 0; i < edgesAlloc - 1 && pEdges[(index + i) & (edgesAlloc - 1)] && v != pEdges[(index + i) & (edgesAlloc - 1)]; ++i)
+			{
+			}
+			pEdges[(index + i) & (edgesAlloc - 1)] = v;
+		}
+	};
+	//For building a collection of coordinates that will represent lines on a face
+	HRESULT createFTCCollection(IFTImage* pColorImg, IFTModel* pModel, FT_CAMERA_CONFIG const* pCameraConfig, FLOAT const* pSUCoef, 
+		FLOAT zoomFactor, POINT viewOffset, IFTResult* pAAMRlt, UINT32 color, EdgeHashTable * eht);
+
 
 	// Global instance of the face tracker.
 	IFTFaceTracker * faceTracker;
@@ -62,16 +86,27 @@ private:
 	IFTImage * intFaceTrackingDepthData;
 	IFTImage * intFaceTrackingColorData;
 	ID2D1Bitmap * intD2DcolorData;
-	// buffers for the data
+	// buffers for the FaceTracking color & depth data
 	IFTImage * DepthBuffer;
 	IFTImage * ColorBuffer;
+	//Other variables necessary for FaceTracking
 
-	//checks if someone is writing the variables. There may only be one reading or writing
+
+	//Variables about the current SkeletonTracked state
+	bool						isTracked;
+	FT_VECTOR3D                 hint3D[2];
+	FT_VECTOR3D					hint3DBuffer[2];
+	bool						lastFTSuccess;
+	//checks if someone is writing the variables. There may only be one thread reading or writing
 	bool locked;
 
-	// Direct2D 
-    ID2D1Factory *           d2DFactory;
-    ID2D1HwndRenderTarget *  renderTarget;
-
+	// Direct2D
+	//vars
+	ID2D1Factory *           d2DFactory;
+	ID2D1HwndRenderTarget *  renderTarget;
+	ID2D1SolidColorBrush  *   brushFaceRect;
+	ID2D1SolidColorBrush *	brushFaceLines;
+	//methods
 	HRESULT ensureDirect2DResources();
+	void discardDirect2DResources();
 };

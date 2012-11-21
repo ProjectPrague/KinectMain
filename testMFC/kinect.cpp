@@ -110,7 +110,7 @@ Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 	faceTracker = NULL;
 	this->hWnd = hwnd;
 	this->globalNui = globalNui;
-	
+
 }
 
 Kinect::~Kinect()
@@ -135,24 +135,24 @@ HRESULT Kinect::initialize()
 {
 	HRESULT hr;
 	bool result;
-	
+
 	//init Direct2D
 	D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, &d2DFactory);
 
 	//init faceTracker
 	faceTracker = new FaceTracking(GetDlgItem(hWnd, 1010), d2DFactory);
-	
+
 	//the three events that the kinect will throw
 	nextDepthFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
 	nextColorFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
 	nextSkeletonEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
 	videoBuffer = FTCreateImage();
 	// depthBuffer = FTCreateImage();                                             <------------------------------ ?
-    
+
 	if (!videoBuffer)
-    {
-        return E_OUTOFMEMORY;
-    }
+	{
+		return E_OUTOFMEMORY;
+	}
 	drawDepth = new ImageDraw();
 	result = drawDepth->Initialize( GetDlgItem( hWnd, 1011), d2DFactory, 320, 240, 320 * 4);
 	if (!result )
@@ -420,10 +420,10 @@ bool Kinect::gotColorAlert()
 		DWORD result = WaitForSingleObject(mutex,5);
 		if (result == WAIT_OBJECT_0){
 			__try {
-					faceTracker->setColorVars(lockedRect, texture);
+				faceTracker->setColorVars(lockedRect, texture);
 			}
 			__finally {
-					ReleaseMutex(mutex);
+				ReleaseMutex(mutex);
 			}
 		}
 	}
@@ -462,14 +462,14 @@ bool Kinect::gotDepthAlert()
 	texture->LockRect(0, &LockedRect, NULL, 0);
 	//give the data to the face tracker
 	DWORD result = WaitForSingleObject(mutex,5);
-		if (result == WAIT_OBJECT_0){
-			__try {
-					faceTracker->setDepthVars(LockedRect, texture);
-			}
-			__finally {
-					ReleaseMutex(mutex);
-			}
+	if (result == WAIT_OBJECT_0){
+		__try {
+			faceTracker->setDepthVars(LockedRect, texture);
 		}
+		__finally {
+			ReleaseMutex(mutex);
+		}
+	}
 	if( 0 != LockedRect.Pitch)
 	{
 		DWORD fWidth, fHeight;
@@ -532,13 +532,26 @@ bool Kinect::gotSkeletonAlert()
 
 	if ( SUCCEEDED(globalNui->NuiSkeletonGetNextFrame( 0, &sFrame)))
 	{
+		//find the closest skeleton and save its head and neck coordinates to facetracking
 		for ( int i = 0 ; i < NUI_SKELETON_COUNT ; i++)
 		{
-			NUI_SKELETON_TRACKING_STATE trackState = sFrame.SkeletonData[i].eTrackingState;
-
-			if ( trackState == NUI_SKELETON_TRACKED || trackState == NUI_SKELETON_POSITION_ONLY )
+			if( sFrame.SkeletonData[i].eTrackingState == NUI_SKELETON_TRACKED &&
+				NUI_SKELETON_POSITION_TRACKED == sFrame.SkeletonData[i].eSkeletonPositionTrackingState[NUI_SKELETON_POSITION_HEAD] &&
+				NUI_SKELETON_POSITION_TRACKED == sFrame.SkeletonData[i].eSkeletonPositionTrackingState[NUI_SKELETON_POSITION_SHOULDER_CENTER])
 			{
 				foundSkeleton = true;
+				m_SkeletonTracked[i] = true;
+				m_HeadPoint[i].x = sFrame.SkeletonData[i].SkeletonPositions[NUI_SKELETON_POSITION_HEAD].x;
+				m_HeadPoint[i].y = sFrame.SkeletonData[i].SkeletonPositions[NUI_SKELETON_POSITION_HEAD].y;
+				m_HeadPoint[i].z = sFrame.SkeletonData[i].SkeletonPositions[NUI_SKELETON_POSITION_HEAD].z;
+				m_NeckPoint[i].x = sFrame.SkeletonData[i].SkeletonPositions[NUI_SKELETON_POSITION_SHOULDER_CENTER].x;
+				m_NeckPoint[i].y = sFrame.SkeletonData[i].SkeletonPositions[NUI_SKELETON_POSITION_SHOULDER_CENTER].y;
+				m_NeckPoint[i].z = sFrame.SkeletonData[i].SkeletonPositions[NUI_SKELETON_POSITION_SHOULDER_CENTER].z;
+			}
+			else
+			{
+				m_HeadPoint[i] = m_NeckPoint[i] = FT_VECTOR3D(0, 0, 0);
+				m_SkeletonTracked[i] = false;
 			}
 		}
 	}
@@ -548,7 +561,7 @@ bool Kinect::gotSkeletonAlert()
 	{
 		return true;
 	}
-
+	getClosestHint();
 	// smooth out the data (?)
 	HRESULT hr = globalNui->NuiTransformSmooth(&sFrame, NULL); // change the parameters?
 	if ( FAILED(hr) )
@@ -564,9 +577,8 @@ bool Kinect::gotSkeletonAlert()
 	hr = EnsureDirect2DResources();
 
 	renderTarget->BeginDraw( );
-	renderTarget->Clear(  D2D1::ColorF(0xFFFFFF, 0.5f) );
 	renderTarget->DrawBitmap( bitmap );
-	
+
 	RECT rct;
 	GetClientRect( GetDlgItem( hWnd, 1012 ), &rct);
 	int width = 640; //rct.right;
@@ -606,8 +618,50 @@ bool Kinect::gotSkeletonAlert()
 void Kinect::blankSkeletonScreen( )
 {
 	renderTarget->BeginDraw( );
-	renderTarget->Clear( D2D1::ColorF( 0xFFFFFF, 0.5f ) );
+	renderTarget->Clear( D2D1::ColorF( 0xFF3FFA, 0.5f ) );
 	renderTarget->EndDraw( );
+}
+
+void Kinect::getClosestHint(){
+	FT_VECTOR3D hint[2];
+	int selectedSkeleton = -1;
+	float smallestDistance = 0;
+
+
+	// Get the skeleton closest to the camera
+	for (int i = 0 ; i < NUI_SKELETON_COUNT ; i++ )
+	{
+		if (m_SkeletonTracked[i] && (smallestDistance == 0 || m_HeadPoint[i].z < smallestDistance))
+		{
+			smallestDistance = m_HeadPoint[i].z;
+			selectedSkeleton = i;
+		}
+	}
+	if (selectedSkeleton == -1)
+	{
+		DWORD result = WaitForSingleObject(mutex,10);
+		if (result == WAIT_OBJECT_0){
+			__try {
+				faceTracker->setTrackBool(false);
+			}
+			__finally {
+				ReleaseMutex(mutex);
+			}
+		}
+	}
+
+	hint[0] = m_NeckPoint[selectedSkeleton];
+	hint[1] = m_HeadPoint[selectedSkeleton];
+	//mutex lock for writing the data to faceTracking
+	DWORD result = WaitForSingleObject(mutex,10);
+		if (result == WAIT_OBJECT_0){
+			__try {
+				faceTracker->setFaceTrackingVars(hint);
+			}
+			__finally {
+				ReleaseMutex(mutex);
+			}
+		}
 }
 
 //Draws a bone from points

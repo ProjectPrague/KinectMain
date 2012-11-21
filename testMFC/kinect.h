@@ -39,6 +39,7 @@ private:
 	void blankSkeletonScreen( );
 
 	//Draws the skeleton.. (Dôh.)
+	void getClosestHint();
 	void DrawSkeleton( const NUI_SKELETON_DATA & skel, int windowWidth, int windowHeight);
 	
 	HRESULT D2DResources();
@@ -86,6 +87,10 @@ private:
 	HANDLE        nextSkeletonEvent;
 	HANDLE        depthStreamHandle;
 	HANDLE        videoStreamHandle;
+
+	FT_VECTOR3D m_NeckPoint[NUI_SKELETON_COUNT];
+    FT_VECTOR3D m_HeadPoint[NUI_SKELETON_COUNT];
+    bool        m_SkeletonTracked[NUI_SKELETON_COUNT];
 
 	//the mutex
 	HANDLE			mutex;
