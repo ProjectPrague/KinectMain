@@ -17,6 +17,7 @@ CStatic * MFC_stCURVAL;
 CStatic * MFC_stNEWVAL;
 CComboBox * MFC_cbKinectList;
 CStatic * MFC_ecFPSCOLOR, * MFC_ecDEPTHCOLOR, * MFC_pcSKELETON;
+CMenu TopMenu;
 
 //other things
 KinectManager * kinectManager;
@@ -29,6 +30,9 @@ class MAINFORM: public CDialog
 private:
 	std::map<int, BSTR> kinectMap;
 
+	void stopProgram(){
+		PostQuitMessage(0);
+	}
 
 public:
 	MAINFORM(CWnd* pParent = NULL): CDialog(MAINFORM::IDD, pParent)
@@ -71,6 +75,10 @@ protected:
 		std::stringstream ss;
 		// integer used for counting in for loop for the kinectlist.
 		int i = 0;
+
+		TopMenu.LoadMenu(MFC_TOPMENU);
+		SetMenu(&TopMenu);
+
 		//Some pre-kinect-check Interface initialisation to make the GUI look nice, even if there is no Kinect
 		MFC_scKINECTANGLE->SetRange(-27, 27, TRUE);
 		//You need an LPCTSTR for a SetWindowText. For this kind of string use, just prefix an L. For normal strings: convert to CString: CString s(str.c_str())
@@ -138,12 +146,12 @@ protected:
 		kinectManager = new KinectManager;
 		kinectManager->initialize(this->GetSafeHwnd());
 		nuiList = kinectManager->getGlobalNuiList();
-			
+
 		if (nuiList.size() > 0){
 			kinect = kinectManager->selectKinect((LPCTSTR) nuiList.front()->NuiUniqueId() );
 			OutputDebugString(L"YOLO = Young Obeying Satan's orders.");
 		}
-		
+
 	}
 
 	static DWORD WINAPI setKinectAngle(LPVOID args){
@@ -213,7 +221,18 @@ public:
 			kinectManager->selectKinect((LPCTSTR) kinectMap[changedSelection]);
 			currentSelection = changedSelection;
 		}
-		
+
+	}
+
+	void OnFileQuit()
+	{
+		stopProgram();
+	}
+
+	void OnClose()
+	{
+		OutputDebugString(L"S.W.A.G. = Satans Wishes Are Granted.");
+		stopProgram();
 	}
 
 	// declares the message map
@@ -240,6 +259,8 @@ BEGIN_MESSAGE_MAP(MAINFORM, CDialog)
 	ON_NOTIFY(NM_RELEASEDCAPTURE, SC_kinectAngle, &MAINFORM::OnNMReleasedcapturekinectangle)	
 	ON_BN_CLICKED(B_setVal, &MAINFORM::OnBnClickedsetval)
 	ON_CBN_SELCHANGE(CB_KinectList, &MAINFORM::OnCbnSelchangeKinectlist)
+	ON_COMMAND(ID_FILE_QUIT, &MAINFORM::OnFileQuit)
+	ON_WM_CLOSE()
 END_MESSAGE_MAP()
 //-----------------------------------------------------------------------------------------
 AppStart theApp;  //Starts the Application

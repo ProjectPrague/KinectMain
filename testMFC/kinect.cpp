@@ -87,7 +87,7 @@ Kinect * KinectManager::selectKinect(CString selected)
 		CString convert = (LPCTSTR) (*it)->NuiUniqueId();
 		OutputDebugString(convert);
 		//if the unique ID is the same as the selected kinect, initialize and return it.
-		if(convert.Compare(selected) != 0)
+		if(convert.Compare(selected) == 0)
 		{
 			Kinect * kinect = new Kinect((*it),hwnd);
 			kinect->initialize();
@@ -123,7 +123,7 @@ Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 	drawDepth = NULL;
 	//drawColor = NULL;
 	//trackedSkeletons = 0;
-	skeletonTrackingFlags = /*NUI_SKELETON_TRACKING_FLAG_ENABLE_IN_NEAR_RANGE  | */NUI_SKELETON_TRACKING_FLAG_ENABLE_SEATED_SUPPORT;
+	skeletonTrackingFlags = NUI_SKELETON_TRACKING_FLAG_ENABLE_IN_NEAR_RANGE  | NUI_SKELETON_TRACKING_FLAG_ENABLE_SEATED_SUPPORT;
 	depthStreamFlags = NUI_IMAGE_STREAM_FLAG_ENABLE_NEAR_MODE;
 	ZeroMemory(stickySkeletonId,sizeof(stickySkeletonId));
 	videoBuffer = NULL;
