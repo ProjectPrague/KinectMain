@@ -56,7 +56,8 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <ForcedIncludeFiles>afx.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles>
+      </ForcedIncludeFiles>
       <BrowseInformation>true</BrowseInformation>
       <AdditionalIncludeDirectories>
       </AdditionalIncludeDirectories>
@@ -95,7 +96,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="Collection.h" />
+    <ClInclude Include="stdafx.h" />
     <ClInclude Include="faceTracking.h" />
     <ClInclude Include="ImageDraw.h" />
     <ClInclude Include="kinect.h" />

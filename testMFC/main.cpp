@@ -1,5 +1,6 @@
 
 //-----------------------------------------------------------------------------------------
+#include "stdafx.h"
 #include "resource.h"    //main symbols
 #include <afxcmn.h>		//needed for the slider
 #include <sstream>		//Needed for the conversion from int to String
@@ -31,7 +32,13 @@ private:
 	std::map<int, BSTR> kinectMap;
 
 	void stopProgram(){
-		PostQuitMessage(0);
+		//delete the kinect
+		delete kinect;
+		kinect = NULL;
+		//delete the kinectManager
+		delete kinectManager;
+		kinectManager = NULL;
+		this->EndDialog(0);
 	}
 
 public:
@@ -149,7 +156,6 @@ protected:
 
 		if (nuiList.size() > 0){
 			kinect = kinectManager->selectKinect((LPCTSTR) nuiList.front()->NuiUniqueId() );
-			OutputDebugString(L"YOLO = Young Obeying Satan's orders.");
 		}
 
 	}
@@ -231,7 +237,6 @@ public:
 
 	void OnClose()
 	{
-		OutputDebugString(L"S.W.A.G. = Satans Wishes Are Granted.");
 		stopProgram();
 	}
 

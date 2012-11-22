@@ -24,10 +24,10 @@
     <ClInclude Include="ImageDraw.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Collection.h">
+    <ClInclude Include="faceTracking.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="faceTracking.h">
+    <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

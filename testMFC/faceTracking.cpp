@@ -18,7 +18,8 @@ FaceTracking::~FaceTracking()
 	applicationRunning = false;
 	if(thread)
 	{
-		WaitForSingleObject(thread, 1000);
+		WaitForSingleObject(thread, INFINITE);
+		CloseHandle(thread);
 	}
 	thread = 0;
 	SafeRelease(renderTarget);

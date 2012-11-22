@@ -1,13 +1,12 @@
 //header file for the kinect.cpp file.
 #pragma once 
 
+#include "stdafx.h"
 #include <afxwin.h>			//MFC core and standard components
-#include "windows.h"
 #include "NuiApi.h"
 #include <list>
 #include "ImageDraw.h"
 #include "resource.h"
-#include "Collection.h"
 #include "faceTracking.h"
 
 
@@ -25,6 +24,7 @@ public:
 private:
 
 	HRESULT EnsureDirect2DResources();
+	void discardDirect2DResources();
 	void unInit();
 
 	// Global NuiSensor.

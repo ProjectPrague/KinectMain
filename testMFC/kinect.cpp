@@ -118,6 +118,7 @@ Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 	nextSkeletonEvent = NULL;
 	depthStreamHandle = NULL;
 	videoStreamHandle = NULL;
+	treadNuiProcessStop = NULL;
 	lastSkeletonFoundTime = 0;
 	screenBlanked = false;
 	drawDepth = NULL;
@@ -131,33 +132,27 @@ Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 
 	this->hWnd = hwnd;
 	this->globalNui = globalNui;
-	
+
 }
 
 Kinect::~Kinect()
 {
-	//unInit();
 
-		if ( NULL != treadNuiProcessStop)
+	if ( NULL != treadNuiProcessStop)
 	{
 		SetEvent(treadNuiProcessStop);
-		
+
 		if( NULL != treadNuiProcess)
 		{
-			WaitForSingleObject(treadNuiProcess, 1000);
+			WaitForSingleObject(treadNuiProcess, 5000);
 			CloseHandle( treadNuiProcess);
 		}
 		treadNuiProcess = 0;
 		CloseHandle(treadNuiProcessStop);
 	}
 
-		SafeRelease( globalNui );
+	SafeRelease( globalNui );
 
-	renderTarget = NULL;
-	brushJointTracked = NULL;
-	brushJointInferred = NULL;
-	brushBoneTracked = NULL;
-	brushBoneInferred = NULL;
 	ZeroMemory(points,sizeof(points));
 
 	nextDepthFrameEvent = NULL;
@@ -169,40 +164,41 @@ Kinect::~Kinect()
 	screenBlanked = false;
 	//drawColor = NULL;
 	//trackedSkeletons = 0;
-	skeletonTrackingFlags = /*NUI_SKELETON_TRACKING_FLAG_ENABLE_IN_NEAR_RANGE  | */NUI_SKELETON_TRACKING_FLAG_ENABLE_SEATED_SUPPORT;
-	depthStreamFlags = NUI_IMAGE_STREAM_FLAG_ENABLE_NEAR_MODE;
 	ZeroMemory(stickySkeletonId,sizeof(stickySkeletonId));
 
 	delete faceTracker;
 	faceTracker = NULL;
-
 	//Cleaning up pointers, to prevent memory leaking
 	delete drawDepth;
 	drawDepth = NULL;
+	//discard Direct2D
+	discardDirect2DResources();
+	//And now every rendertaget has been destructed finally the factory can be destructed too
+	SafeRelease(d2DFactory);
 }
 
 HRESULT Kinect::initialize()
 {
 	HRESULT hr;
 	bool result;
-	
+
 	//init Direct2D
 	D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, &d2DFactory);
 
 	//init faceTracker
 	faceTracker = new FaceTracking(GetDlgItem(hWnd, 1010), d2DFactory);
-	
+
 	//the three events that the kinect will throw
 	nextDepthFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
 	nextColorFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
 	nextSkeletonEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
 	videoBuffer = FTCreateImage();
 	// depthBuffer = FTCreateImage();                                             <------------------------------ ?
-    
+
 	if (!videoBuffer)
-    {
-        return E_OUTOFMEMORY;
-    }
+	{
+		return E_OUTOFMEMORY;
+	}
 	drawDepth = new ImageDraw();
 	result = drawDepth->Initialize( GetDlgItem( hWnd, 1011), d2DFactory, 320, 240, 320 * 4);
 	if (!result )
@@ -276,12 +272,12 @@ HRESULT Kinect::initialize()
 	if ( FAILED(hr) )
 	{
 		hr = globalNui->NuiImageStreamOpen( 
-		HasSkeletalEngine(globalNui) ? NUI_IMAGE_TYPE_DEPTH_AND_PLAYER_INDEX : NUI_IMAGE_TYPE_DEPTH,
-		NUI_IMAGE_RESOLUTION_320x240,
-		NUI_IMAGE_FRAME_FLAG_NONE,
-		2,
-		nextDepthFrameEvent,
-		&depthStreamHandle );
+			HasSkeletalEngine(globalNui) ? NUI_IMAGE_TYPE_DEPTH_AND_PLAYER_INDEX : NUI_IMAGE_TYPE_DEPTH,
+			NUI_IMAGE_RESOLUTION_320x240,
+			NUI_IMAGE_FRAME_FLAG_NONE,
+			2,
+			nextDepthFrameEvent,
+			&depthStreamHandle );
 	}
 	//Init the Mutex system ( to prevent read and write on the same object simultaniously )
 	mutex = CreateMutex(NULL, FALSE,L"D2DBitMapProtector");
@@ -295,46 +291,6 @@ HRESULT Kinect::initialize()
 	faceTracker->startThread();
 	return hr;
 }
-
-//void Kinect::unInit()
-//{
-//	if ( NULL != treadNuiProcessStop)
-//	{
-//		SetEvent(treadNuiProcessStop);
-//		
-//		if( NULL != treadNuiProcess)
-//		{
-//			WaitForSingleObject( treadNuiProcess, INFINITE);
-//			CloseHandle( treadNuiProcess);
-//		}
-//		CloseHandle(treadNuiProcessStop);
-//	}
-//
-//	faceTracker->applicationRunning = false;
-//
-//	SafeRelease( globalNui );
-//
-//	renderTarget = NULL;
-//	brushJointTracked = NULL;
-//	brushJointInferred = NULL;
-//	brushBoneTracked = NULL;
-//	brushBoneInferred = NULL;
-//	ZeroMemory(points,sizeof(points));
-//
-//	nextDepthFrameEvent = NULL;
-//	nextColorFrameEvent = NULL;
-//	nextSkeletonEvent = NULL;
-//	depthStreamHandle = NULL;
-//	videoStreamHandle = NULL;
-//	lastSkeletonFoundTime = 0;
-//	screenBlanked = false;
-//	drawDepth = NULL;
-//	//drawColor = NULL;
-//	//trackedSkeletons = 0;
-//	skeletonTrackingFlags = /*NUI_SKELETON_TRACKING_FLAG_ENABLE_IN_NEAR_RANGE  | */NUI_SKELETON_TRACKING_FLAG_ENABLE_SEATED_SUPPORT;
-//	depthStreamFlags = NUI_IMAGE_STREAM_FLAG_ENABLE_NEAR_MODE;
-//	ZeroMemory(stickySkeletonId,sizeof(stickySkeletonId));
-//}
 
 // Thread to handle Kinect processing, calls class instance thread processor.
 DWORD WINAPI Kinect::ProcessThread( LPVOID param )		// LPVOID is a VOID LONG POINTER -> a pointer to an unspecified type and you
@@ -376,11 +332,6 @@ DWORD WINAPI Kinect::ProcessThread()
 		// wait for any of the events
 		eventIdx = WaitForMultipleObjects( numEvents, handleEvents, FALSE, 100);
 
-			CString text;
-			text.Format(_T("%d"), eventIdx);
-			OutputDebugString(text);
-			OutputDebugString(L"\n");
-
 		// timed out, continue
 		if ( eventIdx == WAIT_TIMEOUT)
 		{
@@ -388,11 +339,11 @@ DWORD WINAPI Kinect::ProcessThread()
 		}
 
 		// stop event was signalled
-		if (WAIT_OBJECT_0 == eventIdx )
-		{
-			continueProcess = false;
-			break;
-		}
+		 if ( WAIT_OBJECT_0 == eventIdx )
+        {
+            continueProcess = false;
+            break;
+        }
 
 		// Wait for each object individually with a 0 timeout to make sure to
 		// process all signalled objects if multiple objects were signalled
@@ -493,10 +444,10 @@ bool Kinect::gotColorAlert()
 		DWORD result = WaitForSingleObject(mutex,5);
 		if (result == WAIT_OBJECT_0){
 			__try {
-					faceTracker->setColorVars(lockedRect, texture);
+				faceTracker->setColorVars(lockedRect, texture);
 			}
 			__finally {
-					ReleaseMutex(mutex);
+				ReleaseMutex(mutex);
 			}
 		}
 	}
@@ -535,14 +486,14 @@ bool Kinect::gotDepthAlert()
 	texture->LockRect(0, &LockedRect, NULL, 0);
 	//give the data to the face tracker
 	DWORD result = WaitForSingleObject(mutex,5);
-		if (result == WAIT_OBJECT_0){
-			__try {
-					faceTracker->setDepthVars(LockedRect, texture);
-			}
-			__finally {
-					ReleaseMutex(mutex);
-			}
+	if (result == WAIT_OBJECT_0){
+		__try {
+			faceTracker->setDepthVars(LockedRect, texture);
 		}
+		__finally {
+			ReleaseMutex(mutex);
+		}
+	}
 	if( 0 != LockedRect.Pitch)
 	{
 		DWORD fWidth, fHeight;
@@ -639,7 +590,7 @@ bool Kinect::gotSkeletonAlert()
 	renderTarget->BeginDraw( );
 	renderTarget->Clear(  D2D1::ColorF(0xFFFFFF, 0.5f) );
 	renderTarget->DrawBitmap( bitmap );
-	
+
 	RECT rct;
 	GetClientRect( GetDlgItem( hWnd, 1012 ), &rct);
 	int width = 640; //rct.right;
@@ -668,7 +619,9 @@ bool Kinect::gotSkeletonAlert()
 	}
 
 	hr = renderTarget->EndDraw( );
-
+	if (hr == D2DERR_RECREATE_TARGET){
+		discardDirect2DResources();
+	}
 	UpdateSkelly( sFrame );
 	return false;
 }
@@ -937,6 +890,15 @@ HRESULT Kinect::EnsureDirect2DResources()
 	}
 
 	return hr;
+}
+
+void Kinect::discardDirect2DResources(){
+	SafeRelease(brushBoneInferred);
+	SafeRelease(brushBoneTracked);
+	SafeRelease(brushJointInferred);
+	SafeRelease(brushJointTracked);
+	SafeRelease(bitmap);
+	SafeRelease(renderTarget);
 }
 
 //Get the angle of the current chosen Kinect.

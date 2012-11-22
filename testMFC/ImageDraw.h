@@ -1,5 +1,5 @@
-//#pragma once
-
+#pragma once
+#include "stdafx.h"
 #include <d2d1.h>
 
 class ImageDraw
@@ -36,8 +36,6 @@ private:
 
 	// Ensure necessary Direct2d resources are created
 	HRESULT CreateResources();
-
-	// Dispose of Direct2d resources.
-	void Discard();
+	void discardResources();
 
 };

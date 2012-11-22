@@ -1,10 +1,9 @@
 #pragma once 
-
+#include "stdafx.h"
 #include "NuiApi.h"
 #include <FaceTrackLib.h>
 #include <d2d1.h>
 #include "resource.h"
-#include "Collection.h"
 
 class FaceTracking
 {
