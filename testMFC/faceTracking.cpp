@@ -1,5 +1,7 @@
 #include "faceTracking.h"
 
+//TODO: make sure the configs are not hardcoded
+
 FaceTracking::FaceTracking(HWND hwnd, ID2D1Factory *d2DFactory)
 {
 	this -> d2DFactory = d2DFactory;
@@ -17,6 +19,7 @@ FaceTracking::FaceTracking(HWND hwnd, ID2D1Factory *d2DFactory)
 
 FaceTracking::~FaceTracking()
 {
+	applicationRunning = false;
 	discardDirect2DResources();
 	// destruct all variables to NULL before shutting down.
 }
@@ -229,6 +232,8 @@ void FaceTracking::faceTrackProcessing()
 		ensureDirect2DResources();
 
 		D2D1_RECT_F rect;
+		EdgeHashTable * eht;
+		POINT * pFTT;
 		hrFT = E_FAIL;
 		if (lastFTSuccess){
 			//Fill rect with the data for the rect around the face
@@ -242,13 +247,44 @@ void FaceTracking::faceTrackProcessing()
 					faceRect.bottom
 					);
 				//Create a collection containing all the coordinates for the lines that need to be drawn for the face tracking
-				EdgeHashTable * eht = new EdgeHashTable();
+				IFTModel * fTModel;
+				hrFT = faceTracker->GetFaceModel(&fTModel);
+				if (SUCCEEDED(hrFT)){
+					FLOAT* pSU = NULL;
+					UINT numSU;
+					BOOL suConverged;
+					hrFT = faceTracker->GetShapeUnits(NULL,&pSU,&numSU,&suConverged);
+					//Should not be hardcoded
+					FT_CAMERA_CONFIG camCon;
+					camCon.Width = 640;
+					camCon.Height = 480;
+					camCon.FocalLength = NUI_CAMERA_COLOR_NOMINAL_FOCAL_LENGTH_IN_PIXELS;
+					POINT vieuwOffset = {0, 0};					
+					eht = new EdgeHashTable;
+					pFTT = new POINT();
+					hrFT = createFTCCollection(ColorBuffer,fTModel,&camCon,pSU,1.0,vieuwOffset,faceTrackingResult,eht, pFTT);
+					//The next part is to get direct 2d coordinates from the facetracker. Needs some experimenting. See: http://msdn.microsoft.com/en-us/library/jj130970.aspx
+					/*FT_VECTOR2D * DPoints;
+					UINT points;
+					faceTrackingResult->Get2DShapePoints(&DPoints,&points);*/
+
+				}
 			}
 		}
 		renderTarget->BeginDraw();
 		renderTarget->DrawBitmap(intD2DcolorData);
 		if (SUCCEEDED(hrFT)){
 			renderTarget->DrawRectangle(&rect,brushFaceRect);
+			//for(UINT i = 0; i < eht->edgesAlloc;++i){
+			//	if (eht->pEdges[i] != 0){
+			//		D2D_POINT_2F d2DPointA, d2DPointB;
+			//		d2DPointA.x = pFTT[eht->pEdges[i] >> 16].x;
+			//		d2DPointA.y = pFTT[eht->pEdges[i] >> 16].y;
+			//		//renderTarget->DrawLine(pFTT[eht->pEdges[i] >> 16].x,p3DMdl[eht.pEdges[i] & 0xFFFF].y);
+			//	}
+			//}
+			_freea(eht->pEdges);
+			_freea(pFTT);
 		}
 		hrD2D = renderTarget->EndDraw();
 		if (hrD2D == D2DERR_RECREATE_TARGET)
@@ -286,7 +322,7 @@ void FaceTracking::Release()
 	DepthBuffer = NULL;
 }
 
-HRESULT FaceTracking::createFTCCollection(IFTImage* pColorImg, IFTModel* pModel, FT_CAMERA_CONFIG const* pCameraConfig, FLOAT const* pSUCoef, FLOAT zoomFactor, POINT viewOffset, IFTResult* pAAMRlt, UINT32 color,EdgeHashTable * eht)
+HRESULT FaceTracking::createFTCCollection(IFTImage* pColorImg, IFTModel* pModel, FT_CAMERA_CONFIG const* pCameraConfig, FLOAT const* pSUCoef, FLOAT zoomFactor, POINT viewOffset, IFTResult* pAAMRlt, EdgeHashTable * eht, POINT * point)
 {
 	HRESULT hr = S_OK;
 	UINT vertexCount = pModel->GetVertexCount();
@@ -306,13 +342,13 @@ HRESULT FaceTracking::createFTCCollection(IFTImage* pColorImg, IFTModel* pModel,
 					scale, rotationXYZ, translationXYZ, pPts2D, vertexCount);
 				if (SUCCEEDED(hr))
 				{
-					POINT* p3DMdl   = reinterpret_cast<POINT*>(_malloca(sizeof(POINT) * vertexCount));
-					if (p3DMdl)
+					point   = reinterpret_cast<POINT*>(_malloca(sizeof(POINT) * vertexCount));
+					if (point)
 					{
 						for (UINT i = 0; i < vertexCount; ++i)
 						{
-							p3DMdl[i].x = LONG(pPts2D[i].x + 0.5f);
-							p3DMdl[i].y = LONG(pPts2D[i].y + 0.5f);
+							point[i].x = LONG(pPts2D[i].x + 0.5f);
+							point[i].y = LONG(pPts2D[i].y + 0.5f);
 						}
 
 						FT_TRIANGLE* pTriangles;
@@ -321,7 +357,6 @@ HRESULT FaceTracking::createFTCCollection(IFTImage* pColorImg, IFTModel* pModel,
 
 						if (SUCCEEDED(hr))
 						{
-
 							eht->edgesAlloc = 1 << UINT(log(2.f * (1 + vertexCount + triangleCount)) / log(2.f));
 							eht->pEdges = reinterpret_cast<UINT32*>(_malloca(sizeof(UINT32) * eht->edgesAlloc));
 							if (eht->pEdges)
@@ -333,34 +368,34 @@ HRESULT FaceTracking::createFTCCollection(IFTImage* pColorImg, IFTModel* pModel,
 									eht->Insert(pTriangles[i].j, pTriangles[i].k);
 									eht->Insert(pTriangles[i].k, pTriangles[i].i);
 								}
-								for (UINT i = 0; i < eht->edgesAlloc; ++i)
-								{
-									if(eht->pEdges[i] != 0)
-									{
-										pColorImg->DrawLine(p3DMdl[eht->pEdges[i] >> 16], p3DMdl[eht->pEdges[i] & 0xFFFF], color, 1);
-									}
-								}
-								_freea(eht->pEdges);
+								//for (UINT i = 0; i < eht->edgesAlloc; ++i)
+								//{
+								//	if(eht->pEdges[i] != 0)
+								//	{
+								//		//pColorImg->DrawLine(point[eht->pEdges[i] >> 16], point[eht->pEdges[i] & 0xFFFF], color, 1);
+								//	}
+								//}
+								//_freea(eht->pEdges);
 							}
 
 							// Render the face rect in magenta
-							RECT rectFace;
+							/*RECT rectFace;
 							hr = pAAMRlt->GetFaceRect(&rectFace);
 							if (SUCCEEDED(hr))
 							{
-								POINT leftTop = {rectFace.left, rectFace.top};
-								POINT rightTop = {rectFace.right - 1, rectFace.top};
-								POINT leftBottom = {rectFace.left, rectFace.bottom - 1};
-								POINT rightBottom = {rectFace.right - 1, rectFace.bottom - 1};
-								UINT32 nColor = 0xff00ff;
-								SUCCEEDED(hr = pColorImg->DrawLine(leftTop, rightTop, nColor, 1)) &&
-									SUCCEEDED(hr = pColorImg->DrawLine(rightTop, rightBottom, nColor, 1)) &&
-									SUCCEEDED(hr = pColorImg->DrawLine(rightBottom, leftBottom, nColor, 1)) &&
-									SUCCEEDED(hr = pColorImg->DrawLine(leftBottom, leftTop, nColor, 1));
-							}
+							POINT leftTop = {rectFace.left, rectFace.top};
+							POINT rightTop = {rectFace.right - 1, rectFace.top};
+							POINT leftBottom = {rectFace.left, rectFace.bottom - 1};
+							POINT rightBottom = {rectFace.right - 1, rectFace.bottom - 1};
+							UINT32 nColor = 0xff00ff;
+							SUCCEEDED(hr = pColorImg->DrawLine(leftTop, rightTop, nColor, 1)) &&
+							SUCCEEDED(hr = pColorImg->DrawLine(rightTop, rightBottom, nColor, 1)) &&
+							SUCCEEDED(hr = pColorImg->DrawLine(rightBottom, leftBottom, nColor, 1)) &&
+							SUCCEEDED(hr = pColorImg->DrawLine(leftBottom, leftTop, nColor, 1));
+							}*/
 						}
 
-						_freea(p3DMdl); 
+						//_freea(point); 
 					}
 					else
 					{

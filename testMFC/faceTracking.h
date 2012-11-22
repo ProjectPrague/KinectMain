@@ -66,7 +66,7 @@ private:
 	};
 	//For building a collection of coordinates that will represent lines on a face
 	HRESULT createFTCCollection(IFTImage* pColorImg, IFTModel* pModel, FT_CAMERA_CONFIG const* pCameraConfig, FLOAT const* pSUCoef, 
-		FLOAT zoomFactor, POINT viewOffset, IFTResult* pAAMRlt, UINT32 color, EdgeHashTable * eht);
+		FLOAT zoomFactor, POINT viewOffset, IFTResult* pAAMRlt, EdgeHashTable * eht, POINT * point);
 
 
 	// Global instance of the face tracker.
