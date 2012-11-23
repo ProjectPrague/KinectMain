@@ -1,7 +1,6 @@
 //this class is for making the image from a byte array.
 
 #include "ImageDraw.h"
-#include "Collection.h"
 
 // Constructor
 ImageDraw::ImageDraw() :
@@ -19,7 +18,7 @@ ImageDraw::ImageDraw() :
 // Destructor
 ImageDraw::~ImageDraw()
 {
-
+	discardResources();
 }
 
 HRESULT ImageDraw::CreateResources()
@@ -65,7 +64,7 @@ HRESULT ImageDraw::CreateResources()
 }
 
 //Safely discard the Direct2d resources.
-void ImageDraw::Discard()
+void ImageDraw::discardResources()
 {
 	SafeRelease(renderTarget);
 	SafeRelease(bitmap);
@@ -133,7 +132,7 @@ bool ImageDraw::GDP ( BYTE * image, unsigned long cbImage)
 	if ( hr == D2DERR_RECREATE_TARGET)
 	{
 		hr = S_OK;
-		Discard();
+		discardResources();
 	}
 	return SUCCEEDED( hr );
 }	

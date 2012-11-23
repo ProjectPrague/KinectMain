@@ -1,11 +1,17 @@
 
 //-----------------------------------------------------------------------------------------
+#include "stdafx.h"
 #include "resource.h"    //main symbols
 #include <afxcmn.h>		//needed for the slider
 #include <sstream>		//Needed for the conversion from int to String
 #include "kinect.h"		//for kinect stuff
 #include <map>			//used to map kinect ID's to the dropdown ID's.
 #include <iostream>		// for debugging purposes
+
+#define new DEBUG_NEW	//lets DEBUG!
+#ifdef _DEBUG	
+	 CMemoryState oldMemState, newMemState, diffMemState;
+#endif
 
 //Global variables
 //graphical things
@@ -17,18 +23,29 @@ CStatic * MFC_stCURVAL;
 CStatic * MFC_stNEWVAL;
 CComboBox * MFC_cbKinectList;
 CStatic * MFC_ecFPSCOLOR, * MFC_ecDEPTHCOLOR, * MFC_pcSKELETON;
+CMenu TopMenu;
 
 //other things
 KinectManager * kinectManager;
 Kinect * kinect;
 std::list<INuiSensor*> nuiList;
-int sliderAngle, kinectAngle;
+int sliderAngle, kinectAngle, currentSelection;
 
 class MAINFORM: public CDialog
 {
 private:
 	std::map<int, BSTR> kinectMap;
 
+	void stopProgram(){
+		//delete the kinect
+		delete kinect;
+		kinect = NULL;
+		//delete the kinectManager
+		delete kinectManager;
+		kinectManager = NULL;
+		DestroyWindow();
+		//this->EndDialog(0);
+	}
 
 public:
 	MAINFORM(CWnd* pParent = NULL): CDialog(MAINFORM::IDD, pParent)
@@ -39,10 +56,14 @@ protected:
 	virtual void DoDataExchange(CDataExchange* pDX) { CDialog::DoDataExchange(pDX); }
 	//Called right after constructor. Initialize things here.
 	virtual BOOL OnInitDialog() 
-	{             
+	{      
+#ifdef _DEBUG
+		   oldMemState.Checkpoint();
+#endif
 		initializePointers();
 		initializeKinect();
 		initializeInterface();
+
 		CDialog::OnInitDialog();
 		return true; 
 	}
@@ -71,6 +92,10 @@ protected:
 		std::stringstream ss;
 		// integer used for counting in for loop for the kinectlist.
 		int i = 0;
+
+		TopMenu.LoadMenu(MFC_TOPMENU);
+		SetMenu(&TopMenu);
+
 		//Some pre-kinect-check Interface initialisation to make the GUI look nice, even if there is no Kinect
 		MFC_scKINECTANGLE->SetRange(-27, 27, TRUE);
 		//You need an LPCTSTR for a SetWindowText. For this kind of string use, just prefix an L. For normal strings: convert to CString: CString s(str.c_str())
@@ -86,9 +111,8 @@ protected:
 				ss << i;
 				CString text = ss.str().c_str();
 				MFC_cbKinectList->AddString(L"Kinect "+text);
-				kinectMap[i] = (*it)->NuiUniqueId();//NuiDeviceConnectionId();
+				kinectMap[i] = (*it)->NuiUniqueId();
 				CString textJeMoeder = (LPCTSTR) (*it)->NuiUniqueId();
-				CString textJeZus = (LPCTSTR) (*it)->NuiDeviceConnectionId();
 				CString textJeVader;
 				textJeVader.Format(_T("%d"), i);
 				OutputDebugString(textJeMoeder);
@@ -97,6 +121,7 @@ protected:
 				OutputDebugString(L"\n");
 			}
 			MFC_cbKinectList->SetCurSel(0);
+			currentSelection = 0;
 		} else {
 			//if there is no kinect
 			//disable usable GUI elements
@@ -138,9 +163,11 @@ protected:
 		kinectManager = new KinectManager;
 		kinectManager->initialize(this->GetSafeHwnd());
 		nuiList = kinectManager->getGlobalNuiList();
+
 		if (nuiList.size() > 0){
-			kinect = kinectManager->selectKinect((LPCTSTR) kinectMap[0]);
+			kinect = kinectManager->selectKinect((LPCTSTR) nuiList.front()->NuiUniqueId() );
 		}
+
 	}
 
 	static DWORD WINAPI setKinectAngle(LPVOID args){
@@ -190,7 +217,6 @@ public:
 			return;
 		}
 
-
 		//If the value from this slider differs from the current kinect value, set it by starting a Thread for doing this.
 		DWORD threadID;
 		HANDLE thread = CreateThread(NULL, 0, setKinectAngle, this, 0, &threadID);
@@ -199,9 +225,40 @@ public:
 
 	void OnCbnSelchangeKinectlist()
 	{
-		//CString textJeMoeder = (LPCTSTR) ;
-		
-		OutputDebugString(L"Selection changed!");
+		int changedSelection = MFC_cbKinectList->GetCurSel();
+		CString text;
+		text.Format(_T("%d"), changedSelection);
+		OutputDebugString(text);
+		//if(changedSelection != currentSelection)
+		{
+			OutputDebugString(L"Selection changed!");
+			delete kinect;
+			//kinect = NULL;
+			kinect = kinectManager->selectKinect((LPCTSTR) kinectMap[changedSelection]);
+			currentSelection = changedSelection;
+			int i = 0;
+			#ifdef _DEBUG
+		newMemState.Checkpoint();
+		//if( diffMemState.Difference( oldMemState, newMemState ) )
+		{
+			oldMemState.DumpAllObjectsSince();
+			TRACE( "Memory leaked!\n" );
+			newMemState.DumpStatistics();
+		}
+		oldMemState.Checkpoint();
+		#endif
+		}
+
+	}
+
+	void OnFileQuit()
+	{
+		stopProgram();
+	}
+
+	void OnClose()
+	{
+		stopProgram();
 	}
 
 	// declares the message map
@@ -228,6 +285,8 @@ BEGIN_MESSAGE_MAP(MAINFORM, CDialog)
 	ON_NOTIFY(NM_RELEASEDCAPTURE, SC_kinectAngle, &MAINFORM::OnNMReleasedcapturekinectangle)	
 	ON_BN_CLICKED(B_setVal, &MAINFORM::OnBnClickedsetval)
 	ON_CBN_SELCHANGE(CB_KinectList, &MAINFORM::OnCbnSelchangeKinectlist)
+	ON_COMMAND(ID_FILE_QUIT, &MAINFORM::OnFileQuit)
+	ON_WM_CLOSE()
 END_MESSAGE_MAP()
 //-----------------------------------------------------------------------------------------
 AppStart theApp;  //Starts the Application

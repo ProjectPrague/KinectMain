@@ -20,8 +20,13 @@ FaceTracking::FaceTracking(HWND hwnd, ID2D1Factory *d2DFactory)
 FaceTracking::~FaceTracking()
 {
 	applicationRunning = false;
-	discardDirect2DResources();
-	// destruct all variables to NULL before shutting down.
+	if(thread)
+	{
+		WaitForSingleObject(thread, INFINITE);
+		CloseHandle(thread);
+	}
+	thread = 0;
+    discardDirect2DResources();
 }
 
 void FaceTracking::setColorVars(NUI_LOCKED_RECT lockedRect, INuiFrameTexture * texture){
