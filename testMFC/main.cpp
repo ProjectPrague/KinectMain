@@ -8,6 +8,11 @@
 #include <map>			//used to map kinect ID's to the dropdown ID's.
 #include <iostream>		// for debugging purposes
 
+#define new DEBUG_NEW	//lets DEBUG!
+#ifdef _DEBUG	
+	 CMemoryState oldMemState, newMemState, diffMemState;
+#endif
+
 //Global variables
 //graphical things
 CEdit * MFC_ecCURVAL; //MFC_ prefix for easy recognizing of visual items
@@ -38,7 +43,8 @@ private:
 		//delete the kinectManager
 		delete kinectManager;
 		kinectManager = NULL;
-		this->EndDialog(0);
+		DestroyWindow();
+		//this->EndDialog(0);
 	}
 
 public:
@@ -50,10 +56,14 @@ protected:
 	virtual void DoDataExchange(CDataExchange* pDX) { CDialog::DoDataExchange(pDX); }
 	//Called right after constructor. Initialize things here.
 	virtual BOOL OnInitDialog() 
-	{             
+	{      
+#ifdef _DEBUG
+		   oldMemState.Checkpoint();
+#endif
 		initializePointers();
 		initializeKinect();
 		initializeInterface();
+
 		CDialog::OnInitDialog();
 		return true; 
 	}
@@ -219,13 +229,24 @@ public:
 		CString text;
 		text.Format(_T("%d"), changedSelection);
 		OutputDebugString(text);
-		if(changedSelection != currentSelection)
+		//if(changedSelection != currentSelection)
 		{
 			OutputDebugString(L"Selection changed!");
 			delete kinect;
-			kinect = NULL;
-			kinectManager->selectKinect((LPCTSTR) kinectMap[changedSelection]);
+			//kinect = NULL;
+			kinect = kinectManager->selectKinect((LPCTSTR) kinectMap[changedSelection]);
 			currentSelection = changedSelection;
+			int i = 0;
+			#ifdef _DEBUG
+		newMemState.Checkpoint();
+		//if( diffMemState.Difference( oldMemState, newMemState ) )
+		{
+			oldMemState.DumpAllObjectsSince();
+			TRACE( "Memory leaked!\n" );
+			newMemState.DumpStatistics();
+		}
+		oldMemState.Checkpoint();
+		#endif
 		}
 
 	}

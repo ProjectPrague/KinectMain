@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <comdef.h>
 #include <stdio.h>
+
 //lookups for color tinting based on player index.
 static const int intensityShiftByPlayerR[] = { 1, 2, 0, 2, 0, 0, 2, 0 };
 static const int intensityShiftByPlayerG[] = { 1, 2, 2, 0, 2, 0, 0, 1 };
@@ -79,7 +80,7 @@ HRESULT KinectManager::initialize(HWND hWnd)
 Kinect * KinectManager::selectKinect(CString selected)
 {
 	int i = 0;
-
+	CMemoryState mem;
 	// create a list of available Nui objects.
 	for (std::list<INuiSensor*>::const_iterator it = nuiList.begin();it != nuiList.end();++it)
 	{
@@ -149,21 +150,35 @@ Kinect::~Kinect()
 		}
 		treadNuiProcess = 0;
 		CloseHandle(treadNuiProcessStop);
+		treadNuiProcessStop = 0;
+	}
+	if (globalNui){
+		globalNui->NuiShutdown();
 	}
 
-	SafeRelease( globalNui );
+	if (nextColorFrameEvent && (nextColorFrameEvent != INVALID_HANDLE_VALUE))
+	{
+		CloseHandle(nextColorFrameEvent);
+		nextColorFrameEvent = NULL;
+	}
+
+	if (nextDepthFrameEvent && (nextDepthFrameEvent != INVALID_HANDLE_VALUE))
+	{
+		CloseHandle(nextDepthFrameEvent);
+		nextDepthFrameEvent = NULL;
+	}
+
+	if (nextSkeletonEvent && (nextSkeletonEvent != INVALID_HANDLE_VALUE)){
+		CloseHandle(nextSkeletonEvent);
+		nextSkeletonEvent = NULL;
+	}
+	//DO NOT SAFERELEASE THE NUI UNLESS CLOSING APP.
+
 
 	ZeroMemory(points,sizeof(points));
-
-	nextDepthFrameEvent = NULL;
-	nextColorFrameEvent = NULL;
-	nextSkeletonEvent = NULL;
+	hWnd = NULL;
 	depthStreamHandle = NULL;
 	videoStreamHandle = NULL;
-	lastSkeletonFoundTime = 0;
-	screenBlanked = false;
-	//drawColor = NULL;
-	//trackedSkeletons = 0;
 	ZeroMemory(stickySkeletonId,sizeof(stickySkeletonId));
 
 	delete faceTracker;
@@ -172,9 +187,11 @@ Kinect::~Kinect()
 	delete drawDepth;
 	drawDepth = NULL;
 	//discard Direct2D
+	//delete videoBuffer;
 	discardDirect2DResources();
 	//And now every rendertaget has been destructed finally the factory can be destructed too
 	SafeRelease(d2DFactory);
+	int i = 5+5;
 }
 
 HRESULT Kinect::initialize()
@@ -193,7 +210,7 @@ HRESULT Kinect::initialize()
 	nextColorFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
 	nextSkeletonEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
 	videoBuffer = FTCreateImage();
-	// depthBuffer = FTCreateImage();                                             <------------------------------ ?
+	// depthBuffer = FTCreateImage();                                           
 
 	if (!videoBuffer)
 	{

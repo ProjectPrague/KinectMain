@@ -10,8 +10,10 @@
 #include "faceTracking.h"
 
 
+
 class Kinect
 {
+
 public:
 	int getKinectAngle();
 	void setKinectAngle(int angle);
