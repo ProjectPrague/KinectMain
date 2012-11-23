@@ -177,8 +177,6 @@ Kinect::~Kinect()
 
 	ZeroMemory(points,sizeof(points));
 	hWnd = NULL;
-	depthStreamHandle = NULL;
-	videoStreamHandle = NULL;
 	ZeroMemory(stickySkeletonId,sizeof(stickySkeletonId));
 
 	delete faceTracker;
