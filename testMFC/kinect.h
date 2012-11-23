@@ -43,8 +43,6 @@ private:
 	//Draws the skeleton.. (Dôh.)
 	void getClosestHint();
 	void DrawSkeleton( const NUI_SKELETON_DATA & skel, int windowWidth, int windowHeight);
-	
-	HRESULT D2DResources();
 
 	void UpdateDepthFlag( DWORD flag, bool value);
 
@@ -59,26 +57,21 @@ private:
 	// Thread to handle the kinect processing.
 	DWORD WINAPI ProcessThread( );
 
-	// Skeletal drawing
+	//Direct2D
+	ID2D1Factory *			d2DFactory;
 	ID2D1HwndRenderTarget *   renderTarget;
 	ID2D1SolidColorBrush  *   brushJointTracked;
 	ID2D1SolidColorBrush  *   brushJointInferred;
 	ID2D1SolidColorBrush  *   brushBoneTracked;
 	ID2D1SolidColorBrush  *   brushBoneInferred;
+	ID2D1Bitmap *            bitmap;
 	D2D1_POINT_2F             points[NUI_SKELETON_POSITION_COUNT];
 
-	// Draw devices
+	// Used for drawing the depth image
 	ImageDraw *				drawDepth;
-	//ImageDraw *				drawColor;
-	ID2D1Factory *			d2DFactory;
 
 	//Facetracker
 	FaceTracking*			faceTracker;
-	//buffers used by the facetreacker
-	IFTImage*				videoBuffer;
-
-	// VGA bitmap
-	ID2D1Bitmap *            bitmap;
 
 	// Tread Handles
 	HANDLE        treadNuiProcess;

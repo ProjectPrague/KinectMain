@@ -10,7 +10,6 @@ FaceTracking::FaceTracking(HWND hwnd, ID2D1Factory *d2DFactory)
 	// All variables must be NULL before the beginning.
 	isTracked = false;
 	faceTrackingResult = NULL;
-	nuiPresent = NULL;
 	ColorBuffer = NULL;
 	DepthBuffer = NULL;
 	renderTarget = NULL;
@@ -26,6 +25,13 @@ FaceTracking::~FaceTracking()
 		CloseHandle(thread);
 	}
 	thread = 0;
+	//saferelease all facetracking pointers
+	SafeRelease(faceTracker);
+	SafeRelease(faceTrackingResult);
+	SafeRelease(faceTrackingColorData);
+	SafeRelease(faceTrackingDepthData);
+	SafeRelease(ColorBuffer);
+	SafeRelease(DepthBuffer);
     discardDirect2DResources();
 }
 
@@ -319,13 +325,6 @@ DWORD WINAPI FaceTracking::faceTrackingThread()
 	return 0;
 }
 //Should delete a pointer and set it to NULL
-void FaceTracking::Release()
-{
-	faceTrackingResult = NULL;
-	nuiPresent = NULL;
-	ColorBuffer = NULL;
-	DepthBuffer = NULL;
-}
 
 HRESULT FaceTracking::createFTCCollection(IFTImage* pColorImg, IFTModel* pModel, FT_CAMERA_CONFIG const* pCameraConfig, FLOAT const* pSUCoef, FLOAT zoomFactor, POINT viewOffset, IFTResult* pAAMRlt, EdgeHashTable * eht, POINT * point)
 {

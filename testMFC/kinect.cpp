@@ -128,7 +128,6 @@ Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 	skeletonTrackingFlags = NUI_SKELETON_TRACKING_FLAG_ENABLE_IN_NEAR_RANGE  | NUI_SKELETON_TRACKING_FLAG_ENABLE_SEATED_SUPPORT;
 	depthStreamFlags = NUI_IMAGE_STREAM_FLAG_ENABLE_NEAR_MODE;
 	ZeroMemory(stickySkeletonId,sizeof(stickySkeletonId));
-	videoBuffer = NULL;
 	faceTracker = NULL;
 
 	this->hWnd = hwnd;
@@ -185,7 +184,6 @@ Kinect::~Kinect()
 	delete drawDepth;
 	drawDepth = NULL;
 	//discard Direct2D
-	//delete videoBuffer;
 	discardDirect2DResources();
 	//And now every rendertaget has been destructed finally the factory can be destructed too
 	SafeRelease(d2DFactory);
@@ -207,17 +205,7 @@ HRESULT Kinect::initialize()
 	nextDepthFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
 	nextColorFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
 	nextSkeletonEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
-	videoBuffer = FTCreateImage();
-<<<<<<< HEAD
-	// depthBuffer = FTCreateImage();                                             <------------------------------ ?
-=======
-	// depthBuffer = FTCreateImage();                                           
->>>>>>> Bugfixing-Branch
 
-	if (!videoBuffer)
-	{
-		return E_OUTOFMEMORY;
-	}
 	drawDepth = new ImageDraw();
 	result = drawDepth->Initialize( GetDlgItem( hWnd, 1011), d2DFactory, 320, 240, 320 * 4);
 	if (!result )
@@ -225,8 +213,6 @@ HRESULT Kinect::initialize()
 		// Display error regarding the depth.
 	}
 
-	//drawColor = new ImageDraw();
-	//result = drawColor->Initialize( GetDlgItem( hWnd, 1010 ), d2DFactory, 640, 480, 640 * 4);
 	if ( !result )
 	{
 		// Display Error regarding the color.
@@ -455,11 +441,8 @@ bool Kinect::gotColorAlert()
 	if( lockedRect.Pitch != 0)
 	{
 		//draw it to the screen.
-		//memcpy(faceTrackingColorData->GetBuffer(), PBYTE(lockedRect.pBits), min(faceTrackingColorData->GetBufferSize, UINT(texture->BufferLen()))); // <----------------------------------------------------------*********
-		//drawColor->GDP( static_cast<BYTE *>(lockedRect.pBits), lockedRect.size);
 		//mutex waiting, 5 ms timeout
 		bitmap->CopyFromMemory(NULL, static_cast<BYTE *>(lockedRect.pBits), 640 * 4);
-		memcpy(videoBuffer->GetBuffer(), PBYTE(lockedRect.pBits), min(videoBuffer->GetBufferSize(),UINT(texture->BufferLen())));
 		DWORD result = WaitForSingleObject(mutex,5);
 		if (result == WAIT_OBJECT_0){
 			__try {

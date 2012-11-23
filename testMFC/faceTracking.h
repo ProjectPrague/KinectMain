@@ -4,11 +4,7 @@
 #include <FaceTrackLib.h>
 #include <d2d1.h>
 #include "resource.h"
-<<<<<<< HEAD
-#include "Collection.h"
 #include <math.h>
-=======
->>>>>>> Bugfixing-Branch
 
 class FaceTracking
 {
@@ -45,8 +41,6 @@ private:
 	//depth config
 	HRESULT DepthVideoConfig(FT_CAMERA_CONFIG* config);
 
-	// Is the kinect there? :D
-	BOOL nuiPresent;
 
 	// for the video processing.
 	void FaceTracking::faceTrackProcessing();
@@ -85,13 +79,11 @@ private:
 	IFTImage * faceTrackingDepthData;
 	IFTImage * faceTrackingColorData;
 	ID2D1Bitmap * d2DcolorData;
-	//internal image interfaces. These are not touched by other threads
-	IFTImage * intFaceTrackingDepthData;
-	IFTImage * intFaceTrackingColorData;
-	ID2D1Bitmap * intD2DcolorData;
+
 	// buffers for the FaceTracking color & depth data
 	IFTImage * DepthBuffer;
 	IFTImage * ColorBuffer;
+	ID2D1Bitmap * intD2DcolorData;
 	//Other variables necessary for FaceTracking
 
 

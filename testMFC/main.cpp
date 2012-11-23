@@ -57,13 +57,12 @@ protected:
 	//Called right after constructor. Initialize things here.
 	virtual BOOL OnInitDialog() 
 	{      
-#ifdef _DEBUG
+		#ifdef _DEBUG
 		   oldMemState.Checkpoint();
-#endif
+		#endif
 		initializePointers();
 		initializeKinect();
 		initializeInterface();
-
 		CDialog::OnInitDialog();
 		return true; 
 	}
@@ -231,21 +230,22 @@ public:
 		OutputDebugString(text);
 		//if(changedSelection != currentSelection)
 		{
-			OutputDebugString(L"Selection changed!");
+			#ifdef _DEBUG
+				newMemState.Checkpoint();
+			#endif
+			OutputDebugString(L"Selection changed!\n");
 			delete kinect;
 			//kinect = NULL;
 			kinect = kinectManager->selectKinect((LPCTSTR) kinectMap[changedSelection]);
 			currentSelection = changedSelection;
 			int i = 0;
-			#ifdef _DEBUG
-		newMemState.Checkpoint();
+		#ifdef _DEBUG		
 		//if( diffMemState.Difference( oldMemState, newMemState ) )
 		{
 			oldMemState.DumpAllObjectsSince();
+			oldMemState.DumpStatistics();
 			TRACE( "Memory leaked!\n" );
-			newMemState.DumpStatistics();
 		}
-		oldMemState.Checkpoint();
 		#endif
 		}
 
@@ -272,6 +272,11 @@ public:
 public:
 	virtual BOOL InitInstance()
 	{
+		long lBreakAlloc = 0;
+		if ( lBreakAlloc > 0 )
+		{
+			_CrtSetBreakAlloc( lBreakAlloc );
+		}
 		CWinApp::InitInstance();
 		MAINFORM dlg;
 		m_pMainWnd = &dlg;
@@ -289,4 +294,5 @@ BEGIN_MESSAGE_MAP(MAINFORM, CDialog)
 	ON_WM_CLOSE()
 END_MESSAGE_MAP()
 //-----------------------------------------------------------------------------------------
+
 AppStart theApp;  //Starts the Application
