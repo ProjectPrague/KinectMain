@@ -11,8 +11,6 @@ public:
 	// Destructor
 	~ImageDraw();
 
-	ID2D1HwndRenderTarget *		 getRenderTarget();
-
 	//Initialize
 	bool Initialize( HWND hWnd, ID2D1Factory * pD2DFactory, int sourceWidth, int sourceHeight, int sourceStride );
 

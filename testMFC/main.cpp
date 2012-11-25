@@ -8,9 +8,8 @@
 #include <map>			//used to map kinect ID's to the dropdown ID's.
 #include <iostream>		// for debugging purposes
 
-#define new DEBUG_NEW	//lets DEBUG!
 #ifdef _DEBUG	
-	 CMemoryState oldMemState, newMemState, diffMemState;
+CMemoryState oldMemState, newMemState, diffMemState;
 #endif
 
 //Global variables
@@ -57,9 +56,9 @@ protected:
 	//Called right after constructor. Initialize things here.
 	virtual BOOL OnInitDialog() 
 	{      
-		#ifdef _DEBUG
-		   oldMemState.Checkpoint();
-		#endif
+#ifdef _DEBUG
+		oldMemState.Checkpoint();
+#endif
 		initializePointers();
 		initializeKinect();
 		initializeInterface();
@@ -160,11 +159,13 @@ protected:
 	{
 		//The kinect initializer. Makes sure every thing is ready to be able to work with the kinect.
 		kinectManager = new KinectManager;
-		kinectManager->initialize(this->GetSafeHwnd());
+		kinectManager->initialize();
 		nuiList = kinectManager->getGlobalNuiList();
 
 		if (nuiList.size() > 0){
-			kinect = kinectManager->selectKinect((LPCTSTR) nuiList.front()->NuiUniqueId() );
+			HRESULT kinectResult;		
+			kinectResult = kinectManager->selectKinect((LPCTSTR) nuiList.front()->NuiUniqueId(), kinect, GetSafeHwnd() );
+			int i = 1+1;
 		}
 
 	}
@@ -230,23 +231,23 @@ public:
 		OutputDebugString(text);
 		//if(changedSelection != currentSelection)
 		{
-			#ifdef _DEBUG
-				newMemState.Checkpoint();
-			#endif
+#ifdef _DEBUG
+			newMemState.Checkpoint();
+#endif
 			OutputDebugString(L"Selection changed!\n");
 			delete kinect;
-			//kinect = NULL;
-			kinect = kinectManager->selectKinect((LPCTSTR) kinectMap[changedSelection]);
-			currentSelection = changedSelection;
-			int i = 0;
-		#ifdef _DEBUG		
-		//if( diffMemState.Difference( oldMemState, newMemState ) )
-		{
-			oldMemState.DumpAllObjectsSince();
-			oldMemState.DumpStatistics();
-			TRACE( "Memory leaked!\n" );
-		}
-		#endif
+			//kinect = NULL;			
+			if (SUCCEEDED(kinectManager->selectKinect((LPCTSTR) kinectMap[changedSelection], kinect, GetSafeHwnd()))){
+				currentSelection = changedSelection;
+				int i = 0;
+			}
+#ifdef _DEBUG		
+			//if( diffMemState.Difference( oldMemState, newMemState ) )
+			{
+				oldMemState.DumpAllObjectsSince();
+				oldMemState.DumpStatistics();
+			}
+#endif
 		}
 
 	}

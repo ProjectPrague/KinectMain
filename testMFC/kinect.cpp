@@ -34,12 +34,11 @@ std::list<INuiSensor*> KinectManager::getGlobalNuiList()
 	return nuiList;
 }
 
-HRESULT KinectManager::initialize(HWND hWnd)
+HRESULT KinectManager::initialize()
 {
 	INuiSensor * nui;
 	int nuiCount = 0;
 	HRESULT hr;
-	this->hwnd = hWnd;
 
 
 	NuiSetDeviceStatusCallback(OnSensorStatusChanged, NULL);
@@ -77,7 +76,7 @@ HRESULT KinectManager::initialize(HWND hWnd)
 
 }
 
-Kinect * KinectManager::selectKinect(CString selected)
+HRESULT KinectManager::selectKinect(CString selected, Kinect *& kinect, HWND hwnd)
 {
 	int i = 0;
 	CMemoryState mem;
@@ -90,13 +89,13 @@ Kinect * KinectManager::selectKinect(CString selected)
 		//if the unique ID is the same as the selected kinect, initialize and return it.
 		if(convert.Compare(selected) == 0)
 		{
-			Kinect * kinect = new Kinect((*it),hwnd);
+			kinect = new Kinect((*it),hwnd);
 			kinect->initialize();
-			return kinect;
+			return S_OK;
 		}
 	}
 	i++;
-	return NULL;
+	return E_FAIL;
 }
 
 void CALLBACK KinectManager::OnSensorStatusChanged( HRESULT hr, const OLECHAR* instanceName, const OLECHAR* uniqueDeviceName, void* userData)
@@ -123,8 +122,6 @@ Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 	lastSkeletonFoundTime = 0;
 	screenBlanked = false;
 	drawDepth = NULL;
-	//drawColor = NULL;
-	//trackedSkeletons = 0;
 	skeletonTrackingFlags = NUI_SKELETON_TRACKING_FLAG_ENABLE_IN_NEAR_RANGE  | NUI_SKELETON_TRACKING_FLAG_ENABLE_SEATED_SUPPORT;
 	depthStreamFlags = NUI_IMAGE_STREAM_FLAG_ENABLE_NEAR_MODE;
 	ZeroMemory(stickySkeletonId,sizeof(stickySkeletonId));
@@ -183,11 +180,13 @@ Kinect::~Kinect()
 	//Cleaning up pointers, to prevent memory leaking
 	delete drawDepth;
 	drawDepth = NULL;
+	//Close the mutex
+	CloseHandle(mutex);
+	mutex = NULL;
 	//discard Direct2D
 	discardDirect2DResources();
 	//And now every rendertaget has been destructed finally the factory can be destructed too
 	SafeRelease(d2DFactory);
-	int i = 5+5;
 }
 
 HRESULT Kinect::initialize()

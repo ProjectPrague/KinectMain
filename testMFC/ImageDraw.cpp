@@ -137,12 +137,3 @@ bool ImageDraw::GDP ( BYTE * image, unsigned long cbImage)
 	return SUCCEEDED( hr );
 }	
 
-ID2D1HwndRenderTarget * ImageDraw::getRenderTarget()
-{
-	if (renderTarget == NULL)
-	{
-		CreateResources();
-	}
-
-	return renderTarget;
-}

@@ -27,7 +27,6 @@ private:
 
 	HRESULT EnsureDirect2DResources();
 	void discardDirect2DResources();
-	void unInit();
 
 	// Global NuiSensor.
 	INuiSensor * globalNui;
@@ -111,11 +110,10 @@ public:
 	~KinectManager();
 	std::list<INuiSensor*> DiscoverList();
 	std::list<INuiSensor*> getGlobalNuiList();
-	HRESULT initialize(HWND hWnd);
-	Kinect * selectKinect(CString selected);
+	HRESULT initialize();
+	HRESULT selectKinect(CString selected, Kinect *& kinect, HWND hwdn);
 
 private:
 	static void CALLBACK OnSensorStatusChanged( HRESULT hr, const OLECHAR* instanceName, const OLECHAR* uniqueDeviceName, void* userData);
-	HWND hwnd;
 	std::list<INuiSensor*> nuiList;
 };
