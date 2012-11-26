@@ -7,7 +7,7 @@
 #include "kinect.h"		//for kinect stuff
 #include <map>			//used to map kinect ID's to the dropdown ID's.
 #include <iostream>		// for debugging purposes
-
+#define new DEBUG_NEW
 #ifdef _DEBUG	
 CMemoryState oldMemState, newMemState, diffMemState;
 #endif
@@ -23,6 +23,9 @@ CStatic * MFC_stNEWVAL;
 CComboBox * MFC_cbKinectList;
 CStatic * MFC_ecFPSCOLOR, * MFC_ecDEPTHCOLOR, * MFC_pcSKELETON;
 CMenu TopMenu;
+
+CFont * cf;
+CBrush * bClear;
 
 //other things
 KinectManager * kinectManager;
@@ -42,6 +45,8 @@ private:
 		//delete the kinectManager
 		delete kinectManager;
 		kinectManager = NULL;
+		delete cf;
+		delete bClear;
 		DestroyWindow();
 		//this->EndDialog(0);
 	}
@@ -143,14 +148,14 @@ protected:
 		MFC_scKINECTANGLE->SetPos(kinectAngle*-1);
 		MFC_scKINECTANGLE->SetRange(-27, 27, TRUE);
 
-		CFont * cf = new CFont();
+		cf = new CFont();
 		cf->CreatePointFont(300,L"Starcraft");
 		MFC_ecFPSCOLOR->SetFont(cf);
 		MFC_ecDEPTHCOLOR->SetFont(cf);
 
 		CPaintDC paint(MFC_pcSKELETON);
 		CRect rErase;
-		CBrush * bClear = new CBrush( RGB(0,0,0));
+		bClear = new CBrush( RGB(0,0,0));
 		MFC_pcSKELETON->GetClientRect(&rErase);
 		paint.FillRect(rErase, bClear);
 		delete bClear;
@@ -231,23 +236,22 @@ public:
 		OutputDebugString(text);
 		//if(changedSelection != currentSelection)
 		{
-#ifdef _DEBUG
-			newMemState.Checkpoint();
-#endif
+
 			OutputDebugString(L"Selection changed!\n");
 			delete kinect;
-			//kinect = NULL;			
+			kinect = NULL;
+#ifdef _DEBUG		
+			//if( diffMemState.Difference( oldMemState, newMemState ) )
+			{
+		_CrtDumpMemoryLeaks();
+				
+			}
+#endif			
 			if (SUCCEEDED(kinectManager->selectKinect((LPCTSTR) kinectMap[changedSelection], kinect, GetSafeHwnd()))){
 				currentSelection = changedSelection;
 				int i = 0;
 			}
-#ifdef _DEBUG		
-			//if( diffMemState.Difference( oldMemState, newMemState ) )
-			{
-				oldMemState.DumpAllObjectsSince();
-				oldMemState.DumpStatistics();
-			}
-#endif
+
 		}
 
 	}
@@ -273,11 +277,13 @@ public:
 public:
 	virtual BOOL InitInstance()
 	{
+		afxMemDF = allocMemDF | checkAlwaysMemDF;
 		long lBreakAlloc = 0;
 		if ( lBreakAlloc > 0 )
 		{
 			_CrtSetBreakAlloc( lBreakAlloc );
 		}
+		oldMemState.Checkpoint();
 		CWinApp::InitInstance();
 		MAINFORM dlg;
 		m_pMainWnd = &dlg;

@@ -24,7 +24,9 @@ FaceTracking::~FaceTracking()
 		WaitForSingleObject(thread, INFINITE);
 		CloseHandle(thread);
 	}
-	thread = 0;
+	thread = NULL;
+	hWnd = NULL;
+	
 	//saferelease all facetracking pointers
 	SafeRelease(faceTracker);
 	SafeRelease(faceTrackingResult);
@@ -32,7 +34,9 @@ FaceTracking::~FaceTracking()
 	SafeRelease(faceTrackingDepthData);
 	SafeRelease(ColorBuffer);
 	SafeRelease(DepthBuffer);
+	ZeroMemory(&hint3D,sizeof(hint3D));
     discardDirect2DResources();
+	int i  = 2+2;
 }
 
 void FaceTracking::setColorVars(NUI_LOCKED_RECT lockedRect, INuiFrameTexture * texture){
@@ -243,7 +247,7 @@ void FaceTracking::faceTrackProcessing()
 		ensureDirect2DResources();
 
 		D2D1_RECT_F rect;
-		EdgeHashTable * eht;
+		//EdgeHashTable * eht;
 		POINT * pFTT;
 		hrFT = E_FAIL;
 		if (lastFTSuccess){
@@ -271,9 +275,9 @@ void FaceTracking::faceTrackProcessing()
 					camCon.Height = 480;
 					camCon.FocalLength = NUI_CAMERA_COLOR_NOMINAL_FOCAL_LENGTH_IN_PIXELS;
 					POINT vieuwOffset = {0, 0};					
-					eht = new EdgeHashTable;
+					//eht = new EdgeHashTable;
 					pFTT = new POINT();
-					hrFT = createFTCCollection(ColorBuffer,fTModel,&camCon,pSU,1.0,vieuwOffset,faceTrackingResult,eht, pFTT);
+					//hrFT = createFTCCollection(ColorBuffer,fTModel,&camCon,pSU,1.0,vieuwOffset,faceTrackingResult, pFTT);
 					//The next part is to get direct 2d coordinates from the facetracker. Needs some experimenting. See: http://msdn.microsoft.com/en-us/library/jj130970.aspx
 					/*FT_VECTOR2D * DPoints;
 					UINT points;
@@ -294,8 +298,8 @@ void FaceTracking::faceTrackProcessing()
 			//		//renderTarget->DrawLine(pFTT[eht->pEdges[i] >> 16].x,p3DMdl[eht.pEdges[i] & 0xFFFF].y);
 			//	}
 			//}
-			_freea(eht->pEdges);
-			_freea(pFTT);
+			//_freea(eht->pEdges);
+			delete pFTT;
 		}
 		hrD2D = renderTarget->EndDraw();
 		if (hrD2D == D2DERR_RECREATE_TARGET)
@@ -326,7 +330,7 @@ DWORD WINAPI FaceTracking::faceTrackingThread()
 }
 //Should delete a pointer and set it to NULL
 
-HRESULT FaceTracking::createFTCCollection(IFTImage* pColorImg, IFTModel* pModel, FT_CAMERA_CONFIG const* pCameraConfig, FLOAT const* pSUCoef, FLOAT zoomFactor, POINT viewOffset, IFTResult* pAAMRlt, EdgeHashTable * eht, POINT * point)
+HRESULT FaceTracking::createFTCCollection(IFTImage* pColorImg, IFTModel* pModel, FT_CAMERA_CONFIG const* pCameraConfig, FLOAT const* pSUCoef, FLOAT zoomFactor, POINT viewOffset, IFTResult* pAAMRlt, POINT * point)
 {
 	HRESULT hr = S_OK;
 	UINT vertexCount = pModel->GetVertexCount();
@@ -361,7 +365,7 @@ HRESULT FaceTracking::createFTCCollection(IFTImage* pColorImg, IFTModel* pModel,
 
 						if (SUCCEEDED(hr))
 						{
-							eht->edgesAlloc = 1 << UINT(log(2.f * (1 + vertexCount + triangleCount)) / log(2.f));
+							/*eht->edgesAlloc = 1 << UINT(log(2.f * (1 + vertexCount + triangleCount)) / log(2.f));
 							eht->pEdges = reinterpret_cast<UINT32*>(_malloca(sizeof(UINT32) * eht->edgesAlloc));
 							if (eht->pEdges)
 							{
@@ -371,7 +375,7 @@ HRESULT FaceTracking::createFTCCollection(IFTImage* pColorImg, IFTModel* pModel,
 									eht->Insert(pTriangles[i].i, pTriangles[i].j);
 									eht->Insert(pTriangles[i].j, pTriangles[i].k);
 									eht->Insert(pTriangles[i].k, pTriangles[i].i);
-								}
+								}*/
 								//for (UINT i = 0; i < eht->edgesAlloc; ++i)
 								//{
 								//	if(eht->pEdges[i] != 0)
@@ -380,7 +384,7 @@ HRESULT FaceTracking::createFTCCollection(IFTImage* pColorImg, IFTModel* pModel,
 								//	}
 								//}
 								//_freea(eht->pEdges);
-							}
+							//}
 
 							// Render the face rect in magenta
 							/*RECT rectFace;

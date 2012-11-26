@@ -171,12 +171,12 @@ Kinect::~Kinect()
 	//DO NOT SAFERELEASE THE NUI UNLESS CLOSING APP.
 
 
-	ZeroMemory(points,sizeof(points));
+	ZeroMemory(&points,sizeof(points));
 	hWnd = NULL;
-	ZeroMemory(stickySkeletonId,sizeof(stickySkeletonId));
+	ZeroMemory(&stickySkeletonId,sizeof(stickySkeletonId));
 
 	delete faceTracker;
-	faceTracker = NULL;
+	//faceTracker = NULL;
 	//Cleaning up pointers, to prevent memory leaking
 	delete drawDepth;
 	drawDepth = NULL;
@@ -645,7 +645,7 @@ bool Kinect::gotSkeletonAlert()
 void Kinect::blankSkeletonScreen( )
 {
 	renderTarget->BeginDraw( );
-	renderTarget->Clear( D2D1::ColorF( 0xFF3FFA, 0.5f ) );
+	renderTarget->Clear( D2D1::ColorF( 0xFFFFFF, 01.0f ) );
 	renderTarget->EndDraw( );
 }
 
