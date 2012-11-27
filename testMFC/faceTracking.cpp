@@ -26,7 +26,7 @@ FaceTracking::~FaceTracking()
 	}
 	thread = NULL;
 	hWnd = NULL;
-	
+
 	//saferelease all facetracking pointers
 	SafeRelease(faceTracker);
 	SafeRelease(faceTrackingResult);
@@ -35,7 +35,7 @@ FaceTracking::~FaceTracking()
 	SafeRelease(ColorBuffer);
 	SafeRelease(DepthBuffer);
 	ZeroMemory(&hint3D,sizeof(hint3D));
-    discardDirect2DResources();
+	discardDirect2DResources();
 	int i  = 2+2;
 }
 
@@ -247,7 +247,7 @@ void FaceTracking::faceTrackProcessing()
 		ensureDirect2DResources();
 
 		D2D1_RECT_F rect;
-		//EdgeHashTable * eht;
+		EdgeHashTable * eht;
 		POINT * pFTT;
 		hrFT = E_FAIL;
 		if (lastFTSuccess){
@@ -275,9 +275,10 @@ void FaceTracking::faceTrackProcessing()
 					camCon.Height = 480;
 					camCon.FocalLength = NUI_CAMERA_COLOR_NOMINAL_FOCAL_LENGTH_IN_PIXELS;
 					POINT vieuwOffset = {0, 0};					
-					//eht = new EdgeHashTable;
+					eht = new EdgeHashTable();
 					pFTT = new POINT();
-					//hrFT = createFTCCollection(ColorBuffer,fTModel,&camCon,pSU,1.0,vieuwOffset,faceTrackingResult, pFTT);
+					hrFT = createFTCCollection(ColorBuffer,fTModel,&camCon,pSU,1.0,vieuwOffset,faceTrackingResult, eht, pFTT);
+
 					//The next part is to get direct 2d coordinates from the facetracker. Needs some experimenting. See: http://msdn.microsoft.com/en-us/library/jj130970.aspx
 					/*FT_VECTOR2D * DPoints;
 					UINT points;
@@ -290,16 +291,24 @@ void FaceTracking::faceTrackProcessing()
 		renderTarget->DrawBitmap(intD2DcolorData);
 		if (SUCCEEDED(hrFT)){
 			renderTarget->DrawRectangle(&rect,brushFaceRect);
-			//for(UINT i = 0; i < eht->edgesAlloc;++i){
-			//	if (eht->pEdges[i] != 0){
-			//		D2D_POINT_2F d2DPointA, d2DPointB;
-			//		d2DPointA.x = pFTT[eht->pEdges[i] >> 16].x;
-			//		d2DPointA.y = pFTT[eht->pEdges[i] >> 16].y;
-			//		//renderTarget->DrawLine(pFTT[eht->pEdges[i] >> 16].x,p3DMdl[eht.pEdges[i] & 0xFFFF].y);
-			//	}
-			//}
-			//_freea(eht->pEdges);
-			delete pFTT;
+			if (eht->pEdges){
+				for(UINT i = 0; i < eht->edgesAlloc;++i){
+					if (eht->pEdges[i] != 0){
+						D2D_POINT_2F d2DPointA, d2DPointB;
+						d2DPointA.x = pFTT[eht->pEdges[i] >> 16].x;
+						d2DPointA.y = pFTT[eht->pEdges[i] >> 16].y;
+						d2DPointB.x = pFTT[eht->pEdges[i] & 0xFFFF].x;
+						d2DPointB.y = pFTT[eht->pEdges[i] & 0xFFFF].y;
+
+						renderTarget->DrawLine(d2DPointA,d2DPointB,brushFaceLines);
+					}
+				}
+			}
+			ZeroMemory(eht->pEdges, sizeof(UINT32) * eht->edgesAlloc);
+			_freea(eht->pEdges);
+			_freea(pFTT);			
+			delete eht;
+			//delete pFTT;
 		}
 		hrD2D = renderTarget->EndDraw();
 		if (hrD2D == D2DERR_RECREATE_TARGET)
@@ -330,7 +339,7 @@ DWORD WINAPI FaceTracking::faceTrackingThread()
 }
 //Should delete a pointer and set it to NULL
 
-HRESULT FaceTracking::createFTCCollection(IFTImage* pColorImg, IFTModel* pModel, FT_CAMERA_CONFIG const* pCameraConfig, FLOAT const* pSUCoef, FLOAT zoomFactor, POINT viewOffset, IFTResult* pAAMRlt, POINT * point)
+HRESULT FaceTracking::createFTCCollection(IFTImage* pColorImg, IFTModel* pModel, FT_CAMERA_CONFIG const* pCameraConfig, FLOAT const* pSUCoef, FLOAT zoomFactor, POINT viewOffset, IFTResult* pAAMRlt, EdgeHashTable *& eht, POINT *& point)
 {
 	HRESULT hr = S_OK;
 	UINT vertexCount = pModel->GetVertexCount();
@@ -365,7 +374,7 @@ HRESULT FaceTracking::createFTCCollection(IFTImage* pColorImg, IFTModel* pModel,
 
 						if (SUCCEEDED(hr))
 						{
-							/*eht->edgesAlloc = 1 << UINT(log(2.f * (1 + vertexCount + triangleCount)) / log(2.f));
+							eht->edgesAlloc = 1 << UINT(log(2.f * (1 + vertexCount + triangleCount)) / log(2.f));
 							eht->pEdges = reinterpret_cast<UINT32*>(_malloca(sizeof(UINT32) * eht->edgesAlloc));
 							if (eht->pEdges)
 							{
@@ -375,7 +384,7 @@ HRESULT FaceTracking::createFTCCollection(IFTImage* pColorImg, IFTModel* pModel,
 									eht->Insert(pTriangles[i].i, pTriangles[i].j);
 									eht->Insert(pTriangles[i].j, pTriangles[i].k);
 									eht->Insert(pTriangles[i].k, pTriangles[i].i);
-								}*/
+								}
 								//for (UINT i = 0; i < eht->edgesAlloc; ++i)
 								//{
 								//	if(eht->pEdges[i] != 0)
@@ -384,7 +393,7 @@ HRESULT FaceTracking::createFTCCollection(IFTImage* pColorImg, IFTModel* pModel,
 								//	}
 								//}
 								//_freea(eht->pEdges);
-							//}
+							}
 
 							// Render the face rect in magenta
 							/*RECT rectFace;
@@ -461,7 +470,7 @@ HRESULT FaceTracking::ensureDirect2DResources(){
 
 		//brushes for drawing (:O)
 		hr = renderTarget->CreateSolidColorBrush(
-			D2D1::ColorF(D2D1::ColorF::DeepPink),
+			D2D1::ColorF(0, 128, 0 ),
 			&brushFaceRect
 			);
 		hr = renderTarget->CreateSolidColorBrush(

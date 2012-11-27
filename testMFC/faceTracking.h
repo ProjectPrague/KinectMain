@@ -46,7 +46,7 @@ private:
 	void FaceTracking::faceTrackProcessing();
 	
 	//STRUCT edgeHashTable, to save converted 3d points
-	/*struct EdgeHashTable
+	struct EdgeHashTable
 	{
 		UINT32* pEdges;
 		UINT edgesAlloc;
@@ -60,10 +60,10 @@ private:
 			}
 			pEdges[(index + i) & (edgesAlloc - 1)] = v;
 		}
-	};*/
+	};
 	//For building a collection of coordinates that will represent lines on a face
 	HRESULT createFTCCollection(IFTImage* pColorImg, IFTModel* pModel, FT_CAMERA_CONFIG const* pCameraConfig, FLOAT const* pSUCoef, 
-		FLOAT zoomFactor, POINT viewOffset, IFTResult* pAAMRlt, POINT * point);
+		FLOAT zoomFactor, POINT viewOffset, IFTResult* pAAMRlt, EdgeHashTable *& eht, POINT *& point);
 
 
 	// Global instance of the face tracker.

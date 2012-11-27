@@ -46,7 +46,6 @@ private:
 		delete kinectManager;
 		kinectManager = NULL;
 		delete cf;
-		delete bClear;
 		DestroyWindow();
 		//this->EndDialog(0);
 	}
@@ -153,12 +152,6 @@ protected:
 		MFC_ecFPSCOLOR->SetFont(cf);
 		MFC_ecDEPTHCOLOR->SetFont(cf);
 
-		CPaintDC paint(MFC_pcSKELETON);
-		CRect rErase;
-		bClear = new CBrush( RGB(0,0,0));
-		MFC_pcSKELETON->GetClientRect(&rErase);
-		paint.FillRect(rErase, bClear);
-		delete bClear;
 	} 
 	void initializeKinect()
 	{
