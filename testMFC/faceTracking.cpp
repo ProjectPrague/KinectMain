@@ -27,6 +27,8 @@ FaceTracking::~FaceTracking()
 	thread = NULL;
 	hWnd = NULL;
 
+	blankFT();
+
 	//saferelease all facetracking pointers
 	SafeRelease(faceTracker);
 	SafeRelease(faceTrackingResult);
@@ -246,51 +248,39 @@ void FaceTracking::faceTrackProcessing()
 		//make sure D2D is ready to go
 		ensureDirect2DResources();
 
-		D2D1_RECT_F rect;
 		EdgeHashTable * eht;
 		POINT * pFTT;
 		hrFT = E_FAIL;
 		if (lastFTSuccess){
 			//Fill rect with the data for the rect around the face
 			RECT faceRect;
-			hrFT = faceTrackingResult->GetFaceRect(&faceRect);
+			//Create a collection containing all the coordinates for the lines that need to be drawn for the face tracking
+			IFTModel * fTModel;
+			hrFT = faceTracker->GetFaceModel(&fTModel);
 			if (SUCCEEDED(hrFT)){
-				rect = D2D1::RectF(
-					faceRect.left,
-					faceRect.top,
-					faceRect.right,
-					faceRect.bottom
-					);
-				//Create a collection containing all the coordinates for the lines that need to be drawn for the face tracking
-				IFTModel * fTModel;
-				hrFT = faceTracker->GetFaceModel(&fTModel);
-				if (SUCCEEDED(hrFT)){
-					FLOAT* pSU = NULL;
-					UINT numSU;
-					BOOL suConverged;
-					hrFT = faceTracker->GetShapeUnits(NULL,&pSU,&numSU,&suConverged);
-					//Should not be hardcoded
-					FT_CAMERA_CONFIG camCon;
-					camCon.Width = 640;
-					camCon.Height = 480;
-					camCon.FocalLength = NUI_CAMERA_COLOR_NOMINAL_FOCAL_LENGTH_IN_PIXELS;
-					POINT vieuwOffset = {0, 0};					
-					eht = new EdgeHashTable();
-					pFTT = new POINT();
-					hrFT = createFTCCollection(ColorBuffer,fTModel,&camCon,pSU,1.0,vieuwOffset,faceTrackingResult, eht, pFTT);
+				FLOAT* pSU = NULL;
+				UINT numSU;
+				BOOL suConverged;
+				hrFT = faceTracker->GetShapeUnits(NULL,&pSU,&numSU,&suConverged);
+				//Should not be hardcoded
+				FT_CAMERA_CONFIG camCon;
+				camCon.Width = 640;
+				camCon.Height = 480;
+				camCon.FocalLength = NUI_CAMERA_COLOR_NOMINAL_FOCAL_LENGTH_IN_PIXELS;
+				POINT vieuwOffset = {0, 0};					
+				eht = new EdgeHashTable();
+				pFTT = new POINT();
+				hrFT = createFTCCollection(ColorBuffer,fTModel,&camCon,pSU,1.0,vieuwOffset,faceTrackingResult, eht, pFTT);
 
-					//The next part is to get direct 2d coordinates from the facetracker. Needs some experimenting. See: http://msdn.microsoft.com/en-us/library/jj130970.aspx
-					/*FT_VECTOR2D * DPoints;
-					UINT points;
-					faceTrackingResult->Get2DShapePoints(&DPoints,&points);*/
-
-				}
+				//The next part is to get direct 2d coordinates from the facetracker. Needs some experimenting. See: http://msdn.microsoft.com/en-us/library/jj130970.aspx
+				/*FT_VECTOR2D * DPoints;
+				UINT points;
+				faceTrackingResult->Get2DShapePoints(&DPoints,&points);*/
 			}
 		}
 		renderTarget->BeginDraw();
 		renderTarget->DrawBitmap(intD2DcolorData);
 		if (SUCCEEDED(hrFT)){
-			renderTarget->DrawRectangle(&rect,brushFaceRect);
 			if (eht->pEdges){
 				for(UINT i = 0; i < eht->edgesAlloc;++i){
 					if (eht->pEdges[i] != 0){
@@ -487,6 +477,13 @@ HRESULT FaceTracking::ensureDirect2DResources(){
 
 	}
 	return hr;
+}
+
+void FaceTracking::blankFT( )
+{
+	renderTarget->BeginDraw( );
+	renderTarget->Clear( D2D1::ColorF( 0xFFFFFF, 0.0f ) );
+	renderTarget->EndDraw( );
 }
 
 void FaceTracking::discardDirect2DResources(){

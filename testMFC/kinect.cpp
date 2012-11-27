@@ -9,9 +9,9 @@
 #include <stdio.h>
 
 //lookups for color tinting based on player index.
-static const int intensityShiftByPlayerR[] = { 1, 2, 0, 2, 0, 0, 2, 0 };
-static const int intensityShiftByPlayerG[] = { 1, 2, 2, 0, 2, 0, 0, 1 };
-static const int intensityShiftByPlayerB[] = { 1, 0, 2, 2, 0, 2, 0, 2 };
+static const int intensityShiftByPlayerR[] = { 1, 2, 0, 2, 0, 0, 2 };
+static const int intensityShiftByPlayerG[] = { 1, 2, 2, 0, 2, 0, 0 };
+static const int intensityShiftByPlayerB[] = { 1, 0, 2, 2, 0, 2, 0 };
 
 static const float jointThickness = 3.0f;
 static const float trackedBoneThickness = 6.0f;
@@ -135,6 +135,7 @@ Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 Kinect::~Kinect()
 {
 
+
 	if ( NULL != treadNuiProcessStop)
 	{
 		SetEvent(treadNuiProcessStop);
@@ -170,7 +171,7 @@ Kinect::~Kinect()
 	}
 	//DO NOT SAFERELEASE THE NUI UNLESS CLOSING APP.
 
-
+	blankSkeletonScreen();
 	ZeroMemory(&points,sizeof(points));
 	hWnd = NULL;
 	ZeroMemory(&stickySkeletonId,sizeof(stickySkeletonId));
@@ -343,11 +344,11 @@ DWORD WINAPI Kinect::ProcessThread()
 		}
 
 		// stop event was signalled
-		 if ( WAIT_OBJECT_0 == eventIdx )
-        {
-            continueProcess = false;
-            break;
-        }
+		if ( WAIT_OBJECT_0 == eventIdx )
+		{
+			continueProcess = false;
+			break;
+		}
 
 		// Wait for each object individually with a 0 timeout to make sure to
 		// process all signalled objects if multiple objects were signalled
@@ -522,9 +523,15 @@ bool Kinect::gotDepthAlert()
 			BYTE intensity = static_cast<BYTE>(~(realdepth >> 4));					// inverteren?
 
 			// tint the intensity by dividing per-player values.
-			*(rgbrun++) = intensity >> intensityShiftByPlayerB[player];				
-			*(rgbrun++) = intensity >> intensityShiftByPlayerG[player];
-			*(rgbrun++) = intensity >> intensityShiftByPlayerR[player];
+			if (player != 0 ){
+				*(rgbrun++) = 143;
+				*(rgbrun++) = 143;
+				*(rgbrun++) = 188;
+			}else{
+				*(rgbrun++) = intensity >> intensityShiftByPlayerB[player];				
+				*(rgbrun++) = intensity >> intensityShiftByPlayerG[player];
+				*(rgbrun++) = intensity >> intensityShiftByPlayerR[player];
+			}
 
 			// No alpha information, skip the last byte.
 			++rgbrun;
@@ -645,7 +652,7 @@ bool Kinect::gotSkeletonAlert()
 void Kinect::blankSkeletonScreen( )
 {
 	renderTarget->BeginDraw( );
-	renderTarget->Clear( D2D1::ColorF( 0xFFFFFF, 01.0f ) );
+	renderTarget->Clear( D2D1::ColorF( 0xFFFFFF, 1.0f ) );
 	renderTarget->EndDraw( );
 }
 
@@ -681,14 +688,14 @@ void Kinect::getClosestHint(){
 	hint[1] = m_HeadPoint[selectedSkeleton];
 	//mutex lock for writing the data to faceTracking
 	DWORD result = WaitForSingleObject(mutex,10);
-		if (result == WAIT_OBJECT_0){
-			__try {
-				faceTracker->setFaceTrackingVars(hint);
-			}
-			__finally {
-				ReleaseMutex(mutex);
-			}
+	if (result == WAIT_OBJECT_0){
+		__try {
+			faceTracker->setFaceTrackingVars(hint);
 		}
+		__finally {
+			ReleaseMutex(mutex);
+		}
+	}
 }
 
 //Draws a bone from points

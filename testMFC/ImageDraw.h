@@ -20,6 +20,8 @@ public:
 
 private:
 
+	void					blankImageDraw( );
+
 	HWND					iDisplay;
 
 	UINT                     sourceHeight;

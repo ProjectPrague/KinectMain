@@ -225,6 +225,7 @@ public:
 	{
 		int changedSelection = MFC_cbKinectList->GetCurSel();
 		CString text;
+		std::stringstream ss;
 		text.Format(_T("%d"), changedSelection);
 		OutputDebugString(text);
 		//if(changedSelection != currentSelection)
@@ -236,12 +237,19 @@ public:
 #ifdef _DEBUG		
 			//if( diffMemState.Difference( oldMemState, newMemState ) )
 			{
-		_CrtDumpMemoryLeaks();
-				
+				_CrtDumpMemoryLeaks();
+
 			}
 #endif			
 			if (SUCCEEDED(kinectManager->selectKinect((LPCTSTR) kinectMap[changedSelection], kinect, GetSafeHwnd()))){
 				currentSelection = changedSelection;
+				kinectAngle = kinect->getKinectAngle();
+				ss << kinectAngle; // Value comes from the kinect.
+				CString text = ss.str().c_str();
+				//set the textfield
+				MFC_ecNEWVAL->SetWindowText(text);
+				//Set the interface
+				MFC_scKINECTANGLE->SetPos(kinectAngle*-1);
 				int i = 0;
 			}
 

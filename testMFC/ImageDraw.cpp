@@ -18,6 +18,7 @@ ImageDraw::ImageDraw() :
 // Destructor
 ImageDraw::~ImageDraw()
 {
+	blankImageDraw();
 	discardResources();
 }
 
@@ -137,3 +138,9 @@ bool ImageDraw::GDP ( BYTE * image, unsigned long cbImage)
 	return SUCCEEDED( hr );
 }	
 
+void ImageDraw::blankImageDraw( )
+{
+	renderTarget->BeginDraw( );
+	renderTarget->Clear( D2D1::ColorF( 0xFFFFFF, 0.0f ) );
+	renderTarget->EndDraw( );
+}

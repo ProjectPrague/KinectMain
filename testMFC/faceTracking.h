@@ -41,6 +41,7 @@ private:
 	//depth config
 	HRESULT DepthVideoConfig(FT_CAMERA_CONFIG* config);
 
+	void blankFT( );
 
 	// for the video processing.
 	void FaceTracking::faceTrackProcessing();
