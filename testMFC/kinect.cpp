@@ -13,6 +13,10 @@ static const int intensityShiftByPlayerR[] = { 1, 2, 0, 2, 0, 0, 2 };
 static const int intensityShiftByPlayerG[] = { 1, 2, 2, 0, 2, 0, 0 };
 static const int intensityShiftByPlayerB[] = { 1, 0, 2, 2, 0, 2, 0 };
 
+static const int colorShiftByPlayerR[] = { 255,	0, 	 0,		255,  0,   255, 0 };
+static const int colorShiftByPlayerG[] = { 0,	255, 0,		255,  255, 0,   0 };
+static const int colorShiftByPlayerB[] = { 0,	0,	 255,	0,    255, 255, 0 };
+
 static const float jointThickness = 3.0f;
 static const float trackedBoneThickness = 6.0f;
 static const float inferredBoneThickness = 1.0f;
@@ -523,15 +527,10 @@ bool Kinect::gotDepthAlert()
 			BYTE intensity = static_cast<BYTE>(~(realdepth >> 4));					// inverteren?
 
 			// tint the intensity by dividing per-player values.
-			if (player != 0 ){
-				*(rgbrun++) = 143;
-				*(rgbrun++) = 143;
-				*(rgbrun++) = 188;
-			}else{
+
 				*(rgbrun++) = intensity >> intensityShiftByPlayerB[player];				
 				*(rgbrun++) = intensity >> intensityShiftByPlayerG[player];
 				*(rgbrun++) = intensity >> intensityShiftByPlayerR[player];
-			}
 
 			// No alpha information, skip the last byte.
 			++rgbrun;
