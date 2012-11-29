@@ -72,7 +72,7 @@ void ImageDraw::discardResources()
 }
 
 
-bool ImageDraw::Initialize( HWND hWnd, ID2D1Factory * pD2DFactory, int sourceWidth, int sourceHeight, int sourceStride )
+bool ImageDraw::Initialize( HWND hWnd, ID2D1Factory *& pD2DFactory, int sourceWidth, int sourceHeight, int sourceStride )
 {
 
 	if ( NULL == pD2DFactory)

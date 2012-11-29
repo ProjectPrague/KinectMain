@@ -2,7 +2,7 @@
 
 //TODO: make sure the configs are not hardcoded
 
-FaceTracking::FaceTracking(HWND hwnd, ID2D1Factory *d2DFactory)
+FaceTracking::FaceTracking(HWND hwnd, ID2D1Factory *& d2DFactory)
 {
 	this -> d2DFactory = d2DFactory;
 	this->hWnd = hwnd;
@@ -51,6 +51,7 @@ void FaceTracking::setDepthVars(NUI_LOCKED_RECT lockedRect, INuiFrameTexture * t
 }
 void FaceTracking::setTrackBool(bool b){
 	isTracked = b;
+	//if false, also reset the color of the lines in the facemask to standard
 }
 
 void FaceTracking::setFaceTrackingVars(FT_VECTOR3D hint[2]){
@@ -269,7 +270,6 @@ void FaceTracking::faceTrackProcessing()
 				camCon.FocalLength = NUI_CAMERA_COLOR_NOMINAL_FOCAL_LENGTH_IN_PIXELS;
 				POINT vieuwOffset = {0, 0};					
 				eht = new EdgeHashTable();
-				pFTT = new POINT();
 				hrFT = createFTCCollection(ColorBuffer,fTModel,&camCon,pSU,1.0,vieuwOffset,faceTrackingResult, eht, pFTT);
 
 				//The next part is to get direct 2d coordinates from the facetracker. Needs some experimenting. See: http://msdn.microsoft.com/en-us/library/jj130970.aspx
@@ -294,11 +294,9 @@ void FaceTracking::faceTrackProcessing()
 					}
 				}
 			}
-			ZeroMemory(eht->pEdges, sizeof(UINT32) * eht->edgesAlloc);
 			_freea(eht->pEdges);
 			_freea(pFTT);			
 			delete eht;
-			//delete pFTT;
 		}
 		hrD2D = renderTarget->EndDraw();
 		if (hrD2D == D2DERR_RECREATE_TARGET)
@@ -375,34 +373,10 @@ HRESULT FaceTracking::createFTCCollection(IFTImage* pColorImg, IFTModel* pModel,
 									eht->Insert(pTriangles[i].j, pTriangles[i].k);
 									eht->Insert(pTriangles[i].k, pTriangles[i].i);
 								}
-								//for (UINT i = 0; i < eht->edgesAlloc; ++i)
-								//{
-								//	if(eht->pEdges[i] != 0)
-								//	{
-								//		//pColorImg->DrawLine(point[eht->pEdges[i] >> 16], point[eht->pEdges[i] & 0xFFFF], color, 1);
-								//	}
-								//}
-								//_freea(eht->pEdges);
 							}
 
-							// Render the face rect in magenta
-							/*RECT rectFace;
-							hr = pAAMRlt->GetFaceRect(&rectFace);
-							if (SUCCEEDED(hr))
-							{
-							POINT leftTop = {rectFace.left, rectFace.top};
-							POINT rightTop = {rectFace.right - 1, rectFace.top};
-							POINT leftBottom = {rectFace.left, rectFace.bottom - 1};
-							POINT rightBottom = {rectFace.right - 1, rectFace.bottom - 1};
-							UINT32 nColor = 0xff00ff;
-							SUCCEEDED(hr = pColorImg->DrawLine(leftTop, rightTop, nColor, 1)) &&
-							SUCCEEDED(hr = pColorImg->DrawLine(rightTop, rightBottom, nColor, 1)) &&
-							SUCCEEDED(hr = pColorImg->DrawLine(rightBottom, leftBottom, nColor, 1)) &&
-							SUCCEEDED(hr = pColorImg->DrawLine(leftBottom, leftTop, nColor, 1));
-							}*/
 						}
 
-						//_freea(point); 
 					}
 					else
 					{

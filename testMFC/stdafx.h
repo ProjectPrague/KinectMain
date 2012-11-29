@@ -16,12 +16,16 @@
 #endif
 
 #include <afx.h>
-#define _CRTDBG_MAP_ALLOC
+#ifdef _DEBUG
+	#define _CRTDBG_MAP_ALLOC
+	#define new DEBUG_NEW
+#endif
 #include <stdlib.h>
 #include <crtdbg.h>
 #include <Windows.h>
 #include <iostream>
 #include <cstdlib>
+#include <sstream>
 
 // Safe release for interfaces
 template<class Interface>

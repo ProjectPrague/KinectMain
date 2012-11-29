@@ -13,6 +13,9 @@
 
 class Kinect
 {
+#ifdef _DEBUG
+	CMemoryState oldMemState, newMemState, diffMemState;
+#endif
 
 public:
 	int getKinectAngle();
@@ -40,7 +43,7 @@ private:
 	void blankSkeletonScreen( );
 
 	//Draws the skeleton.. (Dôh.)
-	void getClosestHint();
+	void getClosestHint( int index);
 	void DrawSkeleton( const NUI_SKELETON_DATA & skel, int windowWidth, int windowHeight);
 
 	void UpdateDepthFlag( DWORD flag, bool value);

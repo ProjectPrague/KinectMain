@@ -3,7 +3,6 @@
 #include <iostream>
 #include "kinect.h"
 #include <mmsystem.h>
-#include <sstream>		//Needed for the conversion from int to String
 #include <assert.h>
 #include <comdef.h>
 #include <stdio.h>
@@ -134,8 +133,10 @@ Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 
 Kinect::~Kinect()
 {
-
-
+#ifdef _DEBUG
+	oldMemState.Checkpoint();
+	oldMemState.DumpAllObjectsSince();
+#endif
 	if ( NULL != treadNuiProcessStop)
 	{
 		SetEvent(treadNuiProcessStop);
@@ -188,6 +189,16 @@ Kinect::~Kinect()
 	discardDirect2DResources();
 	//And now every rendertaget has been destructed finally the factory can be destructed too
 	SafeRelease(d2DFactory);
+#ifdef _DEBUG
+	newMemState.Checkpoint();
+	 if (diffMemState.Difference(oldMemState,newMemState)){
+		 diffMemState.DumpStatistics();
+		 TRACE("OLD MEM STATE\n");
+		 oldMemState.DumpAllObjectsSince();
+		 TRACE("NEW MEM STATE\n");
+		 newMemState.DumpAllObjectsSince();
+	 }
+#endif
 }
 
 HRESULT Kinect::initialize()
@@ -561,11 +572,11 @@ bool Kinect::gotSkeletonAlert()
 	NUI_SKELETON_FRAME sFrame = {0};
 
 	bool foundSkeleton = false;
-
+	int i = 0;
 	if ( SUCCEEDED(globalNui->NuiSkeletonGetNextFrame( 0, &sFrame)))
 	{
 		//find the closest skeleton and save its head and neck coordinates to facetracking
-		for ( int i = 0 ; i < NUI_SKELETON_COUNT ; i++)
+		for (; i < NUI_SKELETON_COUNT ; i++)
 		{
 			if( sFrame.SkeletonData[i].eTrackingState == NUI_SKELETON_TRACKED &&
 				NUI_SKELETON_POSITION_TRACKED == sFrame.SkeletonData[i].eSkeletonPositionTrackingState[NUI_SKELETON_POSITION_HEAD] &&
@@ -593,7 +604,6 @@ bool Kinect::gotSkeletonAlert()
 	{
 		return true;
 	}
-	getClosestHint();
 	// smooth out the data (?)
 	HRESULT hr = globalNui->NuiTransformSmooth(&sFrame, NULL); // change the parameters?
 	if ( FAILED(hr) )
@@ -656,7 +666,7 @@ void Kinect::blankSkeletonScreen( )
 	renderTarget->EndDraw( );
 }
 
-void Kinect::getClosestHint(){
+void Kinect::getClosestHint( int index){
 	FT_VECTOR3D hint[2];
 	int selectedSkeleton = -1;
 	float smallestDistance = 0;

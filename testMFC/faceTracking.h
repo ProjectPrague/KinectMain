@@ -9,7 +9,7 @@
 class FaceTracking
 {
 public:
-	FaceTracking(HWND hwnd, ID2D1Factory * d2DFactory);
+	FaceTracking(HWND hwnd, ID2D1Factory *& d2DFactory);
 	~FaceTracking();
 
 	HRESULT init(HANDLE mutex);

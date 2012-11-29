@@ -3,7 +3,6 @@
 #include "stdafx.h"
 #include "resource.h"    //main symbols
 #include <afxcmn.h>		//needed for the slider
-#include <sstream>		//Needed for the conversion from int to String
 #include "kinect.h"		//for kinect stuff
 #include <map>			//used to map kinect ID's to the dropdown ID's.
 #include <iostream>		// for debugging purposes

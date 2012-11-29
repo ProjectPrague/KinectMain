@@ -12,7 +12,7 @@ public:
 	~ImageDraw();
 
 	//Initialize
-	bool Initialize( HWND hWnd, ID2D1Factory * pD2DFactory, int sourceWidth, int sourceHeight, int sourceStride );
+	bool Initialize( HWND hWnd, ID2D1Factory *& pD2DFactory, int sourceWidth, int sourceHeight, int sourceStride );
 
 	// Set the window to draw to as well as the video format
 	// implied biets per pixel is 32.
