@@ -614,6 +614,7 @@ bool Kinect::gotSkeletonAlert()
 	{
 		return true;
 	}
+	getClosestHint();
 	// smooth out the data (?)
 	HRESULT hr = globalNui->NuiTransformSmooth(&sFrame, NULL); // change the parameters?
 	if ( FAILED(hr) )
@@ -676,7 +677,7 @@ void Kinect::blankSkeletonScreen( )
 	renderTarget->EndDraw( );
 }
 
-void Kinect::getClosestHint( int index){
+void Kinect::getClosestHint(){
 	FT_VECTOR3D hint[2];
 	int selectedSkeleton = -1;
 	float smallestDistance = 0;
