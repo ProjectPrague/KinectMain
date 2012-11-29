@@ -13,9 +13,9 @@ static const int intensityShiftByPlayerR[] = { 1, 2, 0, 2, 0, 0, 2 };
 static const int intensityShiftByPlayerG[] = { 1, 2, 2, 0, 2, 0, 0 };
 static const int intensityShiftByPlayerB[] = { 1, 0, 2, 2, 0, 2, 0 };
 
-static const int colorByPlayerR[] = {0,   0,   255,  0,   255, 255 };
-static const int colorByPlayerG[] = {255, 0,   255,  255, 0,   0 };
-static const int colorByPlayerB[] = {0,   255,	0,    255, 255, 0 };
+static const int colorByPlayerR[] = {0,   0,   254,  0,   255, 255 };
+static const int colorByPlayerG[] = {255, 0,   255,  253, 0,   0 };
+static const int colorByPlayerB[] = {0,   255,	0,   255, 252, 0 };
 
 static const float jointThickness = 3.0f;
 static const float trackedBoneThickness = 6.0f;
@@ -521,14 +521,17 @@ bool Kinect::gotDepthAlert()
 			USHORT depth = *bufferRun;
 			USHORT realdepth = NuiDepthPixelToDepth(depth);
 			USHORT player = NuiDepthPixelToPlayerIndex(depth);
+
 			// transform 13-bit depth information into an 8-bit intensity appropriate
 			// for display (we disregard information in most significant bit)
-			
+
 			if(player > 0)
 			{
-				*(rgbrun++) = colorByPlayerB[--player];				
-				*(rgbrun++) = colorByPlayerG[--player];
-				*(rgbrun++) = colorByPlayerR[--player];
+				player--;
+
+				*(rgbrun++) = colorByPlayerB[player];	
+				*(rgbrun++) = colorByPlayerG[player];
+				*(rgbrun++) = colorByPlayerR[player];
 			}
 			else if(player == 0)
 			{
@@ -540,7 +543,7 @@ bool Kinect::gotDepthAlert()
 				*(rgbrun++) = intensity >> intensityShiftByPlayerR[player];
 			}
 
-			
+
 			// No alpha information, skip the last byte.
 			++rgbrun;
 
@@ -693,7 +696,7 @@ void Kinect::getClosestHint(){
 		}
 	}
 
-	
+
 	hint[0] = m_NeckPoint[selectedSkeleton];
 	hint[1] = m_HeadPoint[selectedSkeleton];
 	//mutex lock for writing the data to faceTracking

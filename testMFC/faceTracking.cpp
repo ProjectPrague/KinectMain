@@ -55,11 +55,7 @@ HRESULT FaceTracking::setMaskColor(int red, int green, int blue)
 	}
 	else
 	{
-		SafeRelease(brushFaceLines);
-		hr = renderTarget->CreateSolidColorBrush(
-			D2D1::ColorF(red, green, blue, 1.0F),
-			&brushFaceLines
-			);
+		brushFaceLines->SetColor(D2D1::ColorF(red, green, blue));
 
 		redCheck = red;
 		greenCheck = green;
