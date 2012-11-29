@@ -12,6 +12,10 @@ static const int intensityShiftByPlayerR[] = { 1, 2, 0, 2, 0, 0, 2 };
 static const int intensityShiftByPlayerG[] = { 1, 2, 2, 0, 2, 0, 0 };
 static const int intensityShiftByPlayerB[] = { 1, 0, 2, 2, 0, 2, 0 };
 
+static const int colorByPlayerR[] = {0,   0,   254,  0,   255, 255 };
+static const int colorByPlayerG[] = {255, 0,   255,  253, 0,   0 };
+static const int colorByPlayerB[] = {0,   255,	0,   255, 252, 0 };
+
 static const float jointThickness = 3.0f;
 static const float trackedBoneThickness = 6.0f;
 static const float inferredBoneThickness = 1.0f;
@@ -531,18 +535,25 @@ bool Kinect::gotDepthAlert()
 
 			// transform 13-bit depth information into an 8-bit intensity appropriate
 			// for display (we disregard information in most significant bit)
-			BYTE intensity = static_cast<BYTE>(~(realdepth >> 4));					// inverteren?
 
-			// tint the intensity by dividing per-player values.
-			if (player != 0 ){
-				*(rgbrun++) = 143;
-				*(rgbrun++) = 143;
-				*(rgbrun++) = 188;
-			}else{
+			if(player > 0)
+			{
+				player--;
+
+				*(rgbrun++) = colorByPlayerB[player];	
+				*(rgbrun++) = colorByPlayerG[player];
+				*(rgbrun++) = colorByPlayerR[player];
+			}
+			else if(player == 0)
+			{
+				BYTE intensity = static_cast<BYTE>(~(realdepth >> 4));					// inverteren?
+
+				// tint the intensity by dividing per-player values.
 				*(rgbrun++) = intensity >> intensityShiftByPlayerB[player];				
 				*(rgbrun++) = intensity >> intensityShiftByPlayerG[player];
 				*(rgbrun++) = intensity >> intensityShiftByPlayerR[player];
 			}
+
 
 			// No alpha information, skip the last byte.
 			++rgbrun;
@@ -570,9 +581,8 @@ bool Kinect::gotDepthAlert()
 bool Kinect::gotSkeletonAlert()
 {
 	NUI_SKELETON_FRAME sFrame = {0};
-
-	bool foundSkeleton = false;
 	int i = 0;
+	bool foundSkeleton = false;
 	if ( SUCCEEDED(globalNui->NuiSkeletonGetNextFrame( 0, &sFrame)))
 	{
 		//find the closest skeleton and save its head and neck coordinates to facetracking
@@ -687,12 +697,14 @@ void Kinect::getClosestHint( int index){
 		if (result == WAIT_OBJECT_0){
 			__try {
 				faceTracker->setTrackBool(false);
+				// reset the face color. ^ in setTrackBool!
 			}
 			__finally {
 				ReleaseMutex(mutex);
 			}
 		}
 	}
+
 
 	hint[0] = m_NeckPoint[selectedSkeleton];
 	hint[1] = m_HeadPoint[selectedSkeleton];
@@ -701,6 +713,7 @@ void Kinect::getClosestHint( int index){
 	if (result == WAIT_OBJECT_0){
 		__try {
 			faceTracker->setFaceTrackingVars(hint);
+			faceTracker->setMaskColor(colorByPlayerR[selectedSkeleton], colorByPlayerG[selectedSkeleton], colorByPlayerB[selectedSkeleton]);// kleurending aanspreken met selectedSkeleton.
 		}
 		__finally {
 			ReleaseMutex(mutex);

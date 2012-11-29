@@ -36,7 +36,7 @@ private:
 	
 	//Handles for the specific data.
 	bool gotColorAlert();
-	bool gotDepthAlert(); 
+	bool gotDepthAlert();
 	bool gotSkeletonAlert();
 
 	// Blanks the skeletonscreen when there is no skeleton found.
