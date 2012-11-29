@@ -601,7 +601,7 @@ bool Kinect::gotSkeletonAlert()
 	{
 		return true;
 	}
-	getClosestHint(i);
+	getClosestHint();
 	// smooth out the data (?)
 	HRESULT hr = globalNui->NuiTransformSmooth(&sFrame, NULL); // change the parameters?
 	if ( FAILED(hr) )
@@ -664,7 +664,7 @@ void Kinect::blankSkeletonScreen( )
 	renderTarget->EndDraw( );
 }
 
-void Kinect::getClosestHint(int index){
+void Kinect::getClosestHint(){
 	FT_VECTOR3D hint[2];
 	int selectedSkeleton = -1;
 	float smallestDistance = 0;
@@ -701,7 +701,7 @@ void Kinect::getClosestHint(int index){
 	if (result == WAIT_OBJECT_0){
 		__try {
 			faceTracker->setFaceTrackingVars(hint);
-			// kleurending aanspreken met i.
+			faceTracker->setMaskColor(colorByPlayerR[selectedSkeleton], colorByPlayerG[selectedSkeleton], colorByPlayerB[selectedSkeleton]);// kleurending aanspreken met selectedSkeleton.
 		}
 		__finally {
 			ReleaseMutex(mutex);

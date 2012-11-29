@@ -21,6 +21,7 @@ public:
 	bool applicationRunning;
 	void startThread();
 	DWORD WINAPI faceTrackingThread();
+		HRESULT FaceTracking::setMaskColor(int red, int green, int blue);
 
 private:
 
@@ -37,7 +38,6 @@ private:
 	//mutex
 	HANDLE mutex;
 
-	HRESULT FaceTracking::setMaskColor(int red, int green, int blue);
 	// Safe release method.
 	void Release();
 

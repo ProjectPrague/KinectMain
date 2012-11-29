@@ -14,9 +14,9 @@ FaceTracking::FaceTracking(HWND hwnd, ID2D1Factory *d2DFactory)
 	DepthBuffer = NULL;
 	renderTarget = NULL;
 	lastFTSuccess = false;
-	redCheck = 0;
-	blueCheck = 0;
-	greenCheck = 0;
+	redCheck = -1;
+	blueCheck = -1;
+	greenCheck = -1;
 }
 
 FaceTracking::~FaceTracking()
@@ -60,6 +60,10 @@ HRESULT FaceTracking::setMaskColor(int red, int green, int blue)
 			D2D1::ColorF(red, green, blue, 1.0F),
 			&brushFaceLines
 			);
+
+		redCheck = red;
+		greenCheck = green;
+		blueCheck = blue;
 	}
 }
 
@@ -73,6 +77,10 @@ void FaceTracking::setDepthVars(NUI_LOCKED_RECT lockedRect, INuiFrameTexture * t
 }
 void FaceTracking::setTrackBool(bool b){
 	isTracked = b;
+	brushFaceLines->SetColor(D2D1::ColorF(D2D1::ColorF::YellowGreen));
+	redCheck = -1;
+	blueCheck = -1;
+	greenCheck = -1;
 }
 
 void FaceTracking::setFaceTrackingVars(FT_VECTOR3D hint[2]){
@@ -251,7 +259,7 @@ void FaceTracking::faceTrackProcessing()
 			ReleaseMutex(mutex);
 		}
 		//start with the face tracking
-		if (SUCCEEDED(hrCopy)){ //If this one is true, both the DepthBuffer and the ColorBuffer are filled whithout errors, the tracking boolean is true and the coordinates are copied
+		if (SUCCEEDED(hrCopy)){ //If this one is true, both the DepthBuffer and the ColorBuffer are filled with no errors, the tracking boolean is true and the coordinates are copied
 
 			POINT ptt = {0,0};
 			FT_SENSOR_DATA sensorData(ColorBuffer,DepthBuffer,1.0f,&ptt);
