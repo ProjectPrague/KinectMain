@@ -33,14 +33,14 @@ private:
 	
 	//Handles for the specific data.
 	bool gotColorAlert();
-	bool gotDepthAlert(); 
+	bool gotDepthAlert();
 	bool gotSkeletonAlert();
 
 	// Blanks the skeletonscreen when there is no skeleton found.
 	void blankSkeletonScreen( );
 
 	//Draws the skeleton.. (Dôh.)
-	void getClosestHint();
+	void getClosestHint( int index);
 	void DrawSkeleton( const NUI_SKELETON_DATA & skel, int windowWidth, int windowHeight);
 
 	void UpdateDepthFlag( DWORD flag, bool value);

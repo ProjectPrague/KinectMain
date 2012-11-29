@@ -14,6 +14,9 @@ FaceTracking::FaceTracking(HWND hwnd, ID2D1Factory *d2DFactory)
 	DepthBuffer = NULL;
 	renderTarget = NULL;
 	lastFTSuccess = false;
+	redCheck = 0;
+	blueCheck = 0;
+	greenCheck = 0;
 }
 
 FaceTracking::~FaceTracking()
@@ -39,6 +42,25 @@ FaceTracking::~FaceTracking()
 	ZeroMemory(&hint3D,sizeof(hint3D));
 	discardDirect2DResources();
 	int i  = 2+2;
+}
+
+HRESULT FaceTracking::setMaskColor(int red, int green, int blue)
+{
+	HRESULT hr = E_FAIL;
+
+	if( redCheck == red && greenCheck == green && blueCheck == blue)
+	{
+		hr = S_OK;
+		return hr;
+	}
+	else
+	{
+		SafeRelease(brushFaceLines);
+		hr = renderTarget->CreateSolidColorBrush(
+			D2D1::ColorF(red, green, blue, 1.0F),
+			&brushFaceLines
+			);
+	}
 }
 
 void FaceTracking::setColorVars(NUI_LOCKED_RECT lockedRect, INuiFrameTexture * texture){
@@ -460,10 +482,6 @@ HRESULT FaceTracking::ensureDirect2DResources(){
 
 		//brushes for drawing (:O)
 		hr = renderTarget->CreateSolidColorBrush(
-			D2D1::ColorF(0, 128, 0 ),
-			&brushFaceRect
-			);
-		hr = renderTarget->CreateSolidColorBrush(
 			D2D1::ColorF(D2D1::ColorF::YellowGreen),
 			&brushFaceLines
 			);
@@ -489,7 +507,6 @@ void FaceTracking::blankFT( )
 void FaceTracking::discardDirect2DResources(){
 	SafeRelease(d2DcolorData);
 	SafeRelease(intD2DcolorData);
-	SafeRelease(brushFaceRect);
 	SafeRelease(brushFaceLines);
 	SafeRelease(renderTarget);
 }

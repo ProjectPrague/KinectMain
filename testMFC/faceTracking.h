@@ -23,6 +23,10 @@ public:
 	DWORD WINAPI faceTrackingThread();
 
 private:
+
+	
+	int redCheck, blueCheck, greenCheck;
+
 	//hwnd
 	HWND hWnd;
 	//Thread
@@ -32,6 +36,8 @@ private:
 	DWORD WINAPI fceTrackingThread();
 	//mutex
 	HANDLE mutex;
+
+	HRESULT FaceTracking::setMaskColor(int red, int green, int blue);
 	// Safe release method.
 	void Release();
 
@@ -100,7 +106,6 @@ private:
 	//vars
 	ID2D1Factory *           d2DFactory;
 	ID2D1HwndRenderTarget *  renderTarget;
-	ID2D1SolidColorBrush  *   brushFaceRect;
 	ID2D1SolidColorBrush *	brushFaceLines;
 	//methods
 	HRESULT ensureDirect2DResources();

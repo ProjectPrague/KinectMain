@@ -13,9 +13,9 @@ static const int intensityShiftByPlayerR[] = { 1, 2, 0, 2, 0, 0, 2 };
 static const int intensityShiftByPlayerG[] = { 1, 2, 2, 0, 2, 0, 0 };
 static const int intensityShiftByPlayerB[] = { 1, 0, 2, 2, 0, 2, 0 };
 
-static const int colorShiftByPlayerR[] = { 255,	0, 	 0,		255,  0,   255, 0 };
-static const int colorShiftByPlayerG[] = { 0,	255, 0,		255,  255, 0,   0 };
-static const int colorShiftByPlayerB[] = { 0,	0,	 255,	0,    255, 255, 0 };
+static const int colorByPlayerR[] = {0,   0,   255,  0,   255, 255 };
+static const int colorByPlayerG[] = {255, 0,   255,  255, 0,   0 };
+static const int colorByPlayerB[] = {0,   255,	0,    255, 255, 0 };
 
 static const float jointThickness = 3.0f;
 static const float trackedBoneThickness = 6.0f;
@@ -521,17 +521,26 @@ bool Kinect::gotDepthAlert()
 			USHORT depth = *bufferRun;
 			USHORT realdepth = NuiDepthPixelToDepth(depth);
 			USHORT player = NuiDepthPixelToPlayerIndex(depth);
-
 			// transform 13-bit depth information into an 8-bit intensity appropriate
 			// for display (we disregard information in most significant bit)
-			BYTE intensity = static_cast<BYTE>(~(realdepth >> 4));					// inverteren?
+			
+			if(player > 0)
+			{
+				*(rgbrun++) = colorByPlayerB[--player];				
+				*(rgbrun++) = colorByPlayerG[--player];
+				*(rgbrun++) = colorByPlayerR[--player];
+			}
+			else if(player == 0)
+			{
+				BYTE intensity = static_cast<BYTE>(~(realdepth >> 4));					// inverteren?
 
-			// tint the intensity by dividing per-player values.
-
+				// tint the intensity by dividing per-player values.
 				*(rgbrun++) = intensity >> intensityShiftByPlayerB[player];				
 				*(rgbrun++) = intensity >> intensityShiftByPlayerG[player];
 				*(rgbrun++) = intensity >> intensityShiftByPlayerR[player];
+			}
 
+			
 			// No alpha information, skip the last byte.
 			++rgbrun;
 
@@ -558,13 +567,13 @@ bool Kinect::gotDepthAlert()
 bool Kinect::gotSkeletonAlert()
 {
 	NUI_SKELETON_FRAME sFrame = {0};
-
+	int i = 0;
 	bool foundSkeleton = false;
 
 	if ( SUCCEEDED(globalNui->NuiSkeletonGetNextFrame( 0, &sFrame)))
 	{
 		//find the closest skeleton and save its head and neck coordinates to facetracking
-		for ( int i = 0 ; i < NUI_SKELETON_COUNT ; i++)
+		for (; i < NUI_SKELETON_COUNT ; i++)
 		{
 			if( sFrame.SkeletonData[i].eTrackingState == NUI_SKELETON_TRACKED &&
 				NUI_SKELETON_POSITION_TRACKED == sFrame.SkeletonData[i].eSkeletonPositionTrackingState[NUI_SKELETON_POSITION_HEAD] &&
@@ -592,7 +601,7 @@ bool Kinect::gotSkeletonAlert()
 	{
 		return true;
 	}
-	getClosestHint();
+	getClosestHint(i);
 	// smooth out the data (?)
 	HRESULT hr = globalNui->NuiTransformSmooth(&sFrame, NULL); // change the parameters?
 	if ( FAILED(hr) )
@@ -655,7 +664,7 @@ void Kinect::blankSkeletonScreen( )
 	renderTarget->EndDraw( );
 }
 
-void Kinect::getClosestHint(){
+void Kinect::getClosestHint(int index){
 	FT_VECTOR3D hint[2];
 	int selectedSkeleton = -1;
 	float smallestDistance = 0;
@@ -676,6 +685,7 @@ void Kinect::getClosestHint(){
 		if (result == WAIT_OBJECT_0){
 			__try {
 				faceTracker->setTrackBool(false);
+				// reset the face color. ^ in setTrackBool!
 			}
 			__finally {
 				ReleaseMutex(mutex);
@@ -683,6 +693,7 @@ void Kinect::getClosestHint(){
 		}
 	}
 
+	
 	hint[0] = m_NeckPoint[selectedSkeleton];
 	hint[1] = m_HeadPoint[selectedSkeleton];
 	//mutex lock for writing the data to faceTracking
@@ -690,6 +701,7 @@ void Kinect::getClosestHint(){
 	if (result == WAIT_OBJECT_0){
 		__try {
 			faceTracker->setFaceTrackingVars(hint);
+			// kleurending aanspreken met i.
 		}
 		__finally {
 			ReleaseMutex(mutex);
