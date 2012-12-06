@@ -29,7 +29,9 @@ KinectManager::KinectManager()
 
 }
 
-KinectManager::~KinectManager(){
+KinectManager::~KinectManager()
+{
+
 }
 
 std::list<INuiSensor*> KinectManager::getGlobalNuiList()
@@ -174,7 +176,7 @@ Kinect::~Kinect()
 		CloseHandle(nextSkeletonEvent);
 		nextSkeletonEvent = NULL;
 	}
-	//DO NOT SAFERELEASE THE NUI UNLESS CLOSING APP.
+	//DO NOT SAFERELEASE THE NUI
 
 	blankSkeletonScreen();
 	ZeroMemory(&points,sizeof(points));

@@ -55,12 +55,14 @@ HRESULT FaceTracking::setMaskColor(int red, int green, int blue)
 	}
 	else
 	{
-		brushFaceLines->SetColor(D2D1::ColorF(red, green, blue));
+		brushFaceLines->SetColor(D2D1::ColorF((float)red, (float)green, (float)blue));
 
 		redCheck = red;
 		greenCheck = green;
 		blueCheck = blue;
+		return S_OK;
 	}
+	return hr;
 }
 
 void FaceTracking::setColorVars(NUI_LOCKED_RECT lockedRect, INuiFrameTexture * texture){
@@ -99,13 +101,6 @@ HRESULT FaceTracking::init(HANDLE mutex)
 
 	//VideoConfig(&colorConfig);
 	//DepthVideoConfig(&depthConfig);	
-
-	//initializes the face tracker.
-	hr = faceTracker->Initialize(&colorConfig, &depthConfig, NULL, NULL);
-	if (FAILED(hr))
-	{
-
-	}
 
 	// create instance of the face tracker.
 	faceTracker = FTCreateFaceTracker(NULL);
@@ -282,7 +277,6 @@ void FaceTracking::faceTrackProcessing()
 		hrFT = E_FAIL;
 		if (lastFTSuccess){
 			//Fill rect with the data for the rect around the face
-			RECT faceRect;
 			//Create a collection containing all the coordinates for the lines that need to be drawn for the face tracking
 			IFTModel * fTModel;
 			hrFT = faceTracker->GetFaceModel(&fTModel);
@@ -306,6 +300,10 @@ void FaceTracking::faceTrackProcessing()
 				faceTrackingResult->Get2DShapePoints(&DPoints,&points);*/
 			}
 		}
+		else 
+		{
+			faceTrackingResult->Reset();
+		}
 		renderTarget->BeginDraw();
 		renderTarget->DrawBitmap(intD2DcolorData);
 		if (SUCCEEDED(hrFT)){
@@ -313,10 +311,10 @@ void FaceTracking::faceTrackProcessing()
 				for(UINT i = 0; i < eht->edgesAlloc;++i){
 					if (eht->pEdges[i] != 0){
 						D2D_POINT_2F d2DPointA, d2DPointB;
-						d2DPointA.x = pFTT[eht->pEdges[i] >> 16].x;
-						d2DPointA.y = pFTT[eht->pEdges[i] >> 16].y;
-						d2DPointB.x = pFTT[eht->pEdges[i] & 0xFFFF].x;
-						d2DPointB.y = pFTT[eht->pEdges[i] & 0xFFFF].y;
+						d2DPointA.x = (float)pFTT[eht->pEdges[i] >> 16].x;
+						d2DPointA.y = (float)pFTT[eht->pEdges[i] >> 16].y;
+						d2DPointB.x = (float)pFTT[eht->pEdges[i] & 0xFFFF].x;
+						d2DPointB.y = (float)pFTT[eht->pEdges[i] & 0xFFFF].y;
 
 						renderTarget->DrawLine(d2DPointA,d2DPointB,brushFaceLines);
 					}
@@ -353,7 +351,6 @@ DWORD WINAPI FaceTracking::faceTrackingThread()
 
 	return 0;
 }
-//Should delete a pointer and set it to NULL
 
 HRESULT FaceTracking::createFTCCollection(IFTImage* pColorImg, IFTModel* pModel, FT_CAMERA_CONFIG const* pCameraConfig, FLOAT const* pSUCoef, FLOAT zoomFactor, POINT viewOffset, IFTResult* pAAMRlt, EdgeHashTable *& eht, POINT *& point)
 {

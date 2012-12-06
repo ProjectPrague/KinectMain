@@ -105,7 +105,6 @@ private:
 };
 
 
-// In control of / takes care of.
 class KinectManager
 {
 public:
