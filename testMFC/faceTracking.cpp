@@ -419,6 +419,41 @@ HRESULT FaceTracking::createFTCCollection(IFTImage* pColorImg, IFTModel* pModel,
 	return hr;
 }
 
+void FaceTracking::FTMeasuring() // FINISH THE MFC OBJECTS FAGGOT.
+{
+	CString Text;
+
+	std::stringstream ss;
+
+	// Initializes the static text fields for FPS text.
+	CStatic * MFC_ecRotationX, * MFC_ecRotationY, * MFC_ecRotationZ;
+	CWnd cWnd;
+	cWnd.m_hWnd = hWnd;
+	//Initialize the Image vieuwer on the GUI. Because this class does not inherit anything relatied to MFC, we need CWnd::GetDlgItem instead of just GetDlgItem.
+	// (By the way: because the main is a CWnd and 'GetDlgItem()' means the same thing as 'this->GetDlgItem()', main.cpp actually uses the same method.)
+	MFC_ecRotationX = (CStatic *) cWnd.GetDlgItem(1017);
+	MFC_ecRotationY	= (CStatic *) cWnd.GetDlgItem(1018);
+	MFC_ecRotationZ = (CStatic *) cWnd.GetDlgItem(1019);
+
+	faceTrackingResult->Get3DPose(&scale, rotation, translation);
+
+	ss << rotation[0];
+	Text = ss.str().c_str();
+	MFC_ecRotationX->SetWindowText(Text);
+	Text.Empty();
+	ss.str("");
+	ss << rotation[1];
+	Text = ss.str().c_str();
+	MFC_ecRotationY->SetWindowText(Text);
+	Text.Empty();
+	ss.str("");
+	ss << rotation[2];
+	Text = ss.str().c_str();
+	MFC_ecRotationZ->SetWindowText(Text);
+	Text.Empty();
+	ss.str("");
+}
+
 //------Direct2D
 
 const int sourceWidth = 640;

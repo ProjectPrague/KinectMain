@@ -1,5 +1,6 @@
 #pragma once 
 #include "stdafx.h"
+#include <afxwin.h>	
 #include "NuiApi.h"
 #include <FaceTrackLib.h>
 #include <d2d1.h>
@@ -37,6 +38,9 @@ private:
 	DWORD WINAPI fceTrackingThread();
 	//mutex
 	HANDLE mutex;
+
+	void FaceTracking::FTMeasuring();
+	FLOAT scale, rotation[3], translation[3];
 
 	// Safe release method.
 	void Release();
