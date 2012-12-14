@@ -339,8 +339,8 @@ DWORD WINAPI Kinect::ProcessThread()
 	cWnd.m_hWnd = hWnd;
 	//Initialize the Image vieuwer on the GUI. Because this class does not inherit anything relatied to MFC, we need CWnd::GetDlgItem instead of just GetDlgItem.
 	// (By the way: because the main is a CWnd and 'GetDlgItem()' means the same thing as 'this->GetDlgItem()', main.cpp actually uses the same method.)
-	MFC_ecFPSCOLOR = (CStatic *) cWnd.GetDlgItem(1015);
-	MFC_ecFPSDEPTH = (CStatic *) cWnd.GetDlgItem(1016);	
+	MFC_ecFPSCOLOR = (CStatic *) cWnd.GetDlgItem(1013);
+	MFC_ecFPSDEPTH = (CStatic *) cWnd.GetDlgItem(1014);	
 
 	lastColorFPSTime	= timeGetTime( );
 	lastDepthFPSTime	= timeGetTime( );

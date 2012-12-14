@@ -81,9 +81,10 @@ protected:
 		MFC_stCURVAL = (CStatic *) GetDlgItem(1006);
 		MFC_stNEWVAL = (CStatic *) GetDlgItem(1007);
 		MFC_cbKinectList = (CComboBox *) GetDlgItem(1008);
-		MFC_ecFPSCOLOR = (CStatic *) GetDlgItem(1015);
-		MFC_ecDEPTHCOLOR = (CStatic *) GetDlgItem(1016);
 		MFC_pcSKELETON = (CStatic *) GetDlgItem(1012);
+		MFC_ecFPSCOLOR = (CStatic *) GetDlgItem(1013);
+		MFC_ecDEPTHCOLOR = (CStatic *) GetDlgItem(1014);
+
 	}
 
 	void initializeInterface()

@@ -431,9 +431,9 @@ void FaceTracking::FTMeasuring() // FINISH THE MFC OBJECTS FAGGOT.
 	cWnd.m_hWnd = hWnd;
 	//Initialize the Image vieuwer on the GUI. Because this class does not inherit anything relatied to MFC, we need CWnd::GetDlgItem instead of just GetDlgItem.
 	// (By the way: because the main is a CWnd and 'GetDlgItem()' means the same thing as 'this->GetDlgItem()', main.cpp actually uses the same method.)
-	MFC_ecRotationX = (CStatic *) cWnd.GetDlgItem(1017);
-	MFC_ecRotationY	= (CStatic *) cWnd.GetDlgItem(1018);
-	MFC_ecRotationZ = (CStatic *) cWnd.GetDlgItem(1019);
+	MFC_ecRotationX = (CStatic *) cWnd.GetDlgItem(1016);
+	MFC_ecRotationY	= (CStatic *) cWnd.GetDlgItem(1017);
+	MFC_ecRotationZ = (CStatic *) cWnd.GetDlgItem(1018);
 
 	faceTrackingResult->Get3DPose(&scale, rotation, translation);
 
