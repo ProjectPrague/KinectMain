@@ -51,6 +51,8 @@ private:
 	//depth config
 	HRESULT DepthVideoConfig(FT_CAMERA_CONFIG* config);
 
+	void setFields();
+
 	void blankFT( );
 
 	// for the video processing.

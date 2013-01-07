@@ -150,6 +150,8 @@ HRESULT FaceTracking::init(HANDLE mutex)
 	//Direct2D
 	ensureDirect2DResources();
 
+	setFields();
+
 	lastTrackingSuccess = false;
 	return 0;
 }
@@ -427,13 +429,13 @@ void FaceTracking::FTMeasuring() // FINISH THE MFC OBJECTS FAGGOT.
 
 	// Initializes the static text fields for FPS text.
 	CStatic * MFC_ecRotationX, * MFC_ecRotationY, * MFC_ecRotationZ;
-	CWnd cWnd;
-	cWnd.m_hWnd = hWnd;
+	CWnd cWndh;
+	cWndh.m_hWnd = hWnd;
 	//Initialize the Image vieuwer on the GUI. Because this class does not inherit anything relatied to MFC, we need CWnd::GetDlgItem instead of just GetDlgItem.
 	// (By the way: because the main is a CWnd and 'GetDlgItem()' means the same thing as 'this->GetDlgItem()', main.cpp actually uses the same method.)
-	MFC_ecRotationX = (CStatic *) cWnd.GetDlgItem(1016);
-	MFC_ecRotationY	= (CStatic *) cWnd.GetDlgItem(1017);
-	MFC_ecRotationZ = (CStatic *) cWnd.GetDlgItem(1018);
+	MFC_ecRotationX = (CStatic *) cWndh.GetDlgItem(1016);
+	//MFC_ecRotationY	= (CStatic *) cWndh.GetDlgItem(1017);
+	//MFC_ecRotationZ = (CStatic *) cWndh.GetDlgItem(1018);
 
 	faceTrackingResult->Get3DPose(&scale, rotation, translation);
 
@@ -452,6 +454,22 @@ void FaceTracking::FTMeasuring() // FINISH THE MFC OBJECTS FAGGOT.
 	MFC_ecRotationZ->SetWindowText(Text);
 	Text.Empty();
 	ss.str("");
+}
+
+void FaceTracking::setFields()
+{
+	CFont * cfont;
+	CStatic * MFC_ecRotationX;
+	CWnd cWnd;
+	cWnd.m_hWnd = hWnd;
+	//Initialize the Image vieuwer on the GUI. Because this class does not inherit anything relatied to MFC, we need CWnd::GetDlgItem instead of just GetDlgItem.
+	// (By the way: because the main is a CWnd and 'GetDlgItem()' means the same thing as 'this->GetDlgItem()', main.cpp actually uses the same method.)
+	MFC_ecRotationX = (CStatic *) cWnd.GetDlgItem(1016);
+
+	//cfont = new CFont();
+	//cfont->CreatePointFont(250, L"Starcraft");
+	//MFC_ecRotationX->SetFont(cfont);
+	//OutputDebugString(L"Testlulz");
 }
 
 //------Direct2D
