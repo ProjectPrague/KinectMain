@@ -216,7 +216,7 @@ HRESULT Kinect::initialize()
 	D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, &d2DFactory);
 
 	//init faceTracker
-	faceTracker = new FaceTracking(GetDlgItem(hWnd, 1010), d2DFactory);
+	faceTracker = new FaceTracking(hWnd, d2DFactory);
 
 	//the three events that the kinect will throw
 	nextDepthFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );

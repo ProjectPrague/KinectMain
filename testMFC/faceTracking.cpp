@@ -461,7 +461,7 @@ void FaceTracking::setFields()
 	CFont * cfont;
 	CStatic * MFC_ecRotationX;
 	CWnd cWnd;
-	cWnd.m_hWnd = hWnd;
+	//cWnd.m_hWnd = hWnd;
 	//Initialize the Image vieuwer on the GUI. Because this class does not inherit anything relatied to MFC, we need CWnd::GetDlgItem instead of just GetDlgItem.
 	// (By the way: because the main is a CWnd and 'GetDlgItem()' means the same thing as 'this->GetDlgItem()', main.cpp actually uses the same method.)
 	MFC_ecRotationX = (CStatic *) cWnd.GetDlgItem(1016);
@@ -479,6 +479,8 @@ const int sourceHeight = 480;
 
 HRESULT FaceTracking::ensureDirect2DResources(){
 	HRESULT hr = S_OK;
+	CWnd cWnd;
+	cWnd.m_hWnd = hWnd;
 
 	if( !renderTarget )
 	{
@@ -489,7 +491,7 @@ HRESULT FaceTracking::ensureDirect2DResources(){
 		rtProps.usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE;
 		hr = d2DFactory->CreateHwndRenderTarget(
 			rtProps,
-			D2D1::HwndRenderTargetProperties(hWnd, size),
+			D2D1::HwndRenderTargetProperties((HWND) cWnd.GetDlgItem(1010), size),
 			&renderTarget
 			);
 
