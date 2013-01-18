@@ -139,10 +139,6 @@ Kinect::Kinect(INuiSensor * globalNui, HWND hwnd)
 
 Kinect::~Kinect()
 {
-#ifdef _DEBUG
-	oldMemState.Checkpoint();
-	oldMemState.DumpAllObjectsSince();
-#endif
 	if ( NULL != treadNuiProcessStop)
 	{
 		SetEvent(treadNuiProcessStop);
@@ -195,28 +191,20 @@ Kinect::~Kinect()
 	discardDirect2DResources();
 	//And now every rendertaget has been destructed finally the factory can be destructed too
 	SafeRelease(d2DFactory);
-#ifdef _DEBUG
-	newMemState.Checkpoint();
-	 if (diffMemState.Difference(oldMemState,newMemState)){
-		 diffMemState.DumpStatistics();
-		 TRACE("OLD MEM STATE\n");
-		 oldMemState.DumpAllObjectsSince();
-		 TRACE("NEW MEM STATE\n");
-		 newMemState.DumpAllObjectsSince();
-	 }
-#endif
 }
 
 HRESULT Kinect::initialize()
 {
 	HRESULT hr;
 	bool result;
+	//prepare the cwnd
+	cWnd.m_hWnd = hWnd;
 
 	//init Direct2D
 	D2D1CreateFactory(D2D1_FACTORY_TYPE_MULTI_THREADED, &d2DFactory);
 
 	//init faceTracker
-	faceTracker = new FaceTracking(hWnd, d2DFactory);
+	faceTracker = new FaceTracking(hWnd, d2DFactory, cWnd);
 
 	//the three events that the kinect will throw
 	nextDepthFrameEvent = CreateEvent( NULL, TRUE, FALSE, NULL );
@@ -335,8 +323,6 @@ DWORD WINAPI Kinect::ProcessThread()
 
 	// Initializes the static text fields for FPS text.
 	CStatic * MFC_ecFPSCOLOR, * MFC_ecFPSDEPTH;
-	CWnd cWnd;
-	cWnd.m_hWnd = hWnd;
 	//Initialize the Image vieuwer on the GUI. Because this class does not inherit anything relatied to MFC, we need CWnd::GetDlgItem instead of just GetDlgItem.
 	// (By the way: because the main is a CWnd and 'GetDlgItem()' means the same thing as 'this->GetDlgItem()', main.cpp actually uses the same method.)
 	MFC_ecFPSCOLOR = (CStatic *) cWnd.GetDlgItem(1013);
@@ -938,43 +924,45 @@ HRESULT Kinect::EnsureDirect2DResources()
 
 	if (!renderTarget)
 	{
-		RECT rc;
-		GetWindowRect( GetDlgItem( hWnd, 1012 ), &rc);
+		if (IsWindow(hWnd)){
+			RECT rc;
+			GetWindowRect( GetDlgItem( hWnd, 1012 ), &rc);
 
-		int width = 640;// (rc.right - rc.left);
-		int height = 480; //(rc.bottom - rc.top);
-		D2D1_SIZE_U size = D2D1::SizeU(width, height);
-		D2D1_RENDER_TARGET_PROPERTIES rtProp = D2D1::RenderTargetProperties();
-		rtProp.pixelFormat = D2D1::PixelFormat( DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED);
-		rtProp.usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE;
+			int width = 640;// (rc.right - rc.left);
+			int height = 480; //(rc.bottom - rc.top);
+			D2D1_SIZE_U size = D2D1::SizeU(width, height);
+			D2D1_RENDER_TARGET_PROPERTIES rtProp = D2D1::RenderTargetProperties();
+			rtProp.pixelFormat = D2D1::PixelFormat( DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED);
+			rtProp.usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE;
 
-		hr = d2DFactory->CreateHwndRenderTarget(
-			rtProp,
-			D2D1::HwndRenderTargetProperties( GetDlgItem( hWnd, 1012 ), size),
-			&renderTarget
-			);
-		if ( FAILED(hr))
-		{
-			// error code, yo.
+			hr = d2DFactory->CreateHwndRenderTarget(
+				rtProp,
+				D2D1::HwndRenderTargetProperties( GetDlgItem( hWnd, 1012 ), size),
+				&renderTarget
+				);
+			if ( FAILED(hr))
+			{
+				// error code, yo.
+			}
+
+			hr = renderTarget->CreateBitmap(
+				size,
+				D2D1::BitmapProperties( D2D1::PixelFormat( DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE) ),
+				&bitmap
+				);
+
+			//light green
+			renderTarget->CreateSolidColorBrush( D2D1::ColorF( 68, 192, 68 ), &brushJointTracked );
+
+			//yellow
+			renderTarget->CreateSolidColorBrush( D2D1::ColorF( 255, 255, 0 ), &brushJointInferred );
+
+			//green
+			renderTarget->CreateSolidColorBrush( D2D1::ColorF( 0, 128, 0 ), &brushBoneTracked );
+
+			//gray
+			renderTarget->CreateSolidColorBrush( D2D1::ColorF( 128, 128, 128 ), &brushBoneInferred );
 		}
-
-		hr = renderTarget->CreateBitmap(
-			size,
-			D2D1::BitmapProperties( D2D1::PixelFormat( DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE) ),
-			&bitmap
-			);
-
-		//light green
-		renderTarget->CreateSolidColorBrush( D2D1::ColorF( 68, 192, 68 ), &brushJointTracked );
-
-		//yellow
-		renderTarget->CreateSolidColorBrush( D2D1::ColorF( 255, 255, 0 ), &brushJointInferred );
-
-		//green
-		renderTarget->CreateSolidColorBrush( D2D1::ColorF( 0, 128, 0 ), &brushBoneTracked );
-
-		//gray
-		renderTarget->CreateSolidColorBrush( D2D1::ColorF( 128, 128, 128 ), &brushBoneInferred );
 	}
 
 	return hr;

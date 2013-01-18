@@ -26,7 +26,7 @@ HRESULT ImageDraw::CreateResources()
 {
 	HRESULT hr = S_OK;
 
-	if( !renderTarget )
+	if( !renderTarget)
 	{
 		D2D1_SIZE_U size = D2D1::SizeU( sourceWidth, sourceHeight);
 

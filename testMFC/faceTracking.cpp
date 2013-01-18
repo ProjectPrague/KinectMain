@@ -2,8 +2,9 @@
 
 //TODO: make sure the configs are not hardcoded
 
-FaceTracking::FaceTracking(HWND hwnd, ID2D1Factory *& d2DFactory)
+FaceTracking::FaceTracking(HWND hwnd, ID2D1Factory *& d2DFactory, CWnd & cWnd)
 {
+	this->cWnd = &cWnd;
 	this -> d2DFactory = d2DFactory;
 	this->hWnd = hwnd;
 	locked = false;
@@ -421,7 +422,7 @@ HRESULT FaceTracking::createFTCCollection(IFTImage* pColorImg, IFTModel* pModel,
 	return hr;
 }
 
-void FaceTracking::FTMeasuring() // FINISH THE MFC OBJECTS FAGGOT.
+void FaceTracking::FTMeasuring() 
 {
 	CString Text;
 
@@ -460,16 +461,15 @@ void FaceTracking::setFields()
 {
 	CFont * cfont;
 	CStatic * MFC_ecRotationX;
-	CWnd cWnd;
-	//cWnd.m_hWnd = hWnd;
 	//Initialize the Image vieuwer on the GUI. Because this class does not inherit anything relatied to MFC, we need CWnd::GetDlgItem instead of just GetDlgItem.
 	// (By the way: because the main is a CWnd and 'GetDlgItem()' means the same thing as 'this->GetDlgItem()', main.cpp actually uses the same method.)
-	MFC_ecRotationX = (CStatic *) cWnd.GetDlgItem(1016);
+	MFC_ecRotationX = (CStatic *) cWnd->GetDlgItem(1016);
 
-	//cfont = new CFont();
-	//cfont->CreatePointFont(250, L"Starcraft");
-	//MFC_ecRotationX->SetFont(cfont);
-	//OutputDebugString(L"Testlulz");
+	cfont = new CFont();
+	cfont->CreatePointFont(250, L"Starcraft");
+	MFC_ecRotationX->SetFont(cfont);
+	MFC_ecRotationX->SetWindowTextW(L"TEST");
+	
 }
 
 //------Direct2D
@@ -479,10 +479,8 @@ const int sourceHeight = 480;
 
 HRESULT FaceTracking::ensureDirect2DResources(){
 	HRESULT hr = S_OK;
-	CWnd cWnd;
-	cWnd.m_hWnd = hWnd;
 
-	if( !renderTarget )
+	if( !renderTarget  && IsWindow(hWnd))
 	{
 		D2D1_SIZE_U size = D2D1::SizeU( sourceWidth, sourceHeight);
 
@@ -491,10 +489,9 @@ HRESULT FaceTracking::ensureDirect2DResources(){
 		rtProps.usage = D2D1_RENDER_TARGET_USAGE_GDI_COMPATIBLE;
 		hr = d2DFactory->CreateHwndRenderTarget(
 			rtProps,
-			D2D1::HwndRenderTargetProperties((HWND) cWnd.GetDlgItem(1010), size),
+			D2D1::HwndRenderTargetProperties(GetDlgItem(hWnd,1010), size),
 			&renderTarget
 			);
-
 		if ( FAILED(hr) )
 		{
 			return hr;

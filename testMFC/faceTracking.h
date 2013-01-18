@@ -1,6 +1,6 @@
 #pragma once 
 #include "stdafx.h"
-#include <afxwin.h>	
+#include <afxwin.h>
 #include "NuiApi.h"
 #include <FaceTrackLib.h>
 #include <d2d1.h>
@@ -10,7 +10,7 @@
 class FaceTracking
 {
 public:
-	FaceTracking(HWND hwnd, ID2D1Factory *& d2DFactory);
+	FaceTracking(HWND hwnd, ID2D1Factory *& d2DFactory, CWnd & cWnd);
 	~FaceTracking();
 
 	HRESULT init(HANDLE mutex);
@@ -31,6 +31,8 @@ private:
 
 	//hwnd
 	HWND hWnd;
+	//cwnd
+	CWnd * cWnd;
 	//Thread
 	HANDLE thread;
 	DWORD threadId;

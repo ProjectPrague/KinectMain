@@ -13,10 +13,6 @@
 
 class Kinect
 {
-#ifdef _DEBUG
-	CMemoryState oldMemState, newMemState, diffMemState;
-#endif
-
 public:
 	int getKinectAngle();
 	void setKinectAngle(int angle);
@@ -102,6 +98,7 @@ private:
 	DWORD		depthStreamFlags;
 
 	 DWORD		stickySkeletonId[NUI_SKELETON_MAX_TRACKED_COUNT];
+	 	CWnd cWnd;
 };
 
 
