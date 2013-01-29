@@ -1,5 +1,13 @@
 //file for kinect managing.
 
+/*
+	KinectMain
+
+
+
+*/
+
+
 #include <iostream>
 #include "kinect.h"
 #include <mmsystem.h>
@@ -303,8 +311,9 @@ HRESULT Kinect::initialize()
 }
 
 // Thread to handle Kinect processing, calls class instance thread processor.
-DWORD WINAPI Kinect::ProcessThread( LPVOID param )		// LPVOID is a VOID LONG POINTER -> a pointer to an unspecified type and you
-{														// cast your own parameter (which should be a pointer, in this case (Kinect *)param)
+DWORD WINAPI Kinect::ProcessThread( LPVOID param )		
+	// LPVOID is a VOID LONG POINTER -> a pointer to an unspecified type and you
+{	// cast your own parameter (which should be a pointer, in this case (Kinect *)param)
 	Kinect *pThis = (Kinect *)param;
 	return pThis->ProcessThread();
 }
@@ -651,7 +660,6 @@ bool Kinect::gotSkeletonAlert()
 	if (hr == D2DERR_RECREATE_TARGET){
 		discardDirect2DResources();
 	}
-	UpdateSkelly( sFrame );
 	return false;
 }
 
@@ -794,110 +802,6 @@ void Kinect::DrawSkeleton( const NUI_SKELETON_DATA & skelly, int windowWidth, in
 		}
 
 	}
-}
-
-void Kinect::UpdateSkelly( const NUI_SKELETON_FRAME &skelly )
-{
-	DWORD nearestIDs[2] = { 0, 0};
-	USHORT nearestDepth[2] = { NUI_IMAGE_DEPTH_MAXIMUM, NUI_IMAGE_DEPTH_MAXIMUM };
-
-	// Clean old sticky skeleton IDs, if the user has left the frame, etc.
-	bool sticky0Found = false;
-	bool sticky1Found = false;
-	for ( int i = 0; i < NUI_SKELETON_COUNT; i++)
-	{
-		NUI_SKELETON_TRACKING_STATE trackState = skelly.SkeletonData[i].eTrackingState;
-
-		if (trackState == NUI_SKELETON_TRACKED || trackState == NUI_SKELETON_POSITION_ONLY )
-		{
-			if ( skelly.SkeletonData[i].dwTrackingID == stickySkeletonId[0] )
-			{
-				sticky0Found = true;
-			}
-			else if ( skelly.SkeletonData[i].dwTrackingID == stickySkeletonId[1] )
-			{
-				sticky1Found = true;
-			}
-		}
-	}
-
-	if (!sticky0Found && sticky1Found )
-	{
-		stickySkeletonId[0] = stickySkeletonId[1];
-		stickySkeletonId[1] = 0;
-	}
-	else if (!sticky0Found )
-	{
-		stickySkeletonId[0] = 0;
-	}
-	else if (!sticky1Found )
-	{
-		stickySkeletonId[1] = 0;
-	}
-
-	// calculate the nearest and sticky skeletons.
-	for( int i = 0; i < NUI_SKELETON_COUNT; i++)
-	{
-		NUI_SKELETON_TRACKING_STATE trackState = skelly.SkeletonData[i].eTrackingState;
-
-		if( trackState == NUI_SKELETON_TRACKED || trackState == NUI_SKELETON_POSITION_ONLY )
-		{
-			// Save skeleton ID for sticky mode if there is none currently saved.
-			if ( 0 == stickySkeletonId[0] && stickySkeletonId[1] != skelly.SkeletonData[i].dwTrackingID )
-			{
-				stickySkeletonId[0] = skelly.SkeletonData[i].dwTrackingID;
-			}
-			else if ( 0 == stickySkeletonId[1] && stickySkeletonId[0] != skelly.SkeletonData[i].dwTrackingID )
-			{
-				stickySkeletonId[1] = skelly.SkeletonData[i].dwTrackingID;
-			}
-
-			LONG x, y;
-			USHORT depth;
-
-			NuiTransformSkeletonToDepthImage ( skelly.SkeletonData[i].Position, &x, &y, &depth);
-
-			if (depth < nearestDepth[0] )
-			{
-				nearestDepth[1] = nearestDepth[0];
-				nearestIDs[1] = skelly.SkeletonData[i].dwTrackingID;
-
-				nearestDepth[0] = depth;
-				nearestIDs[0] = skelly.SkeletonData[i].dwTrackingID;
-			}
-			else if ( depth < nearestDepth[1] )
-			{
-				nearestDepth[1] = depth;
-				nearestIDs[1] = skelly.SkeletonData[i].dwTrackingID;
-			}
-		}
-	}
-
-	/*  For sticky skeletons, could be nice later on.
-
-	if ( SV_TRACKED_SKELETONS_NEAREST1 == m_TrackedSkeletons || SV_TRACKED_SKELETONS_NEAREST2 == m_TrackedSkeletons )
-	{
-	// Only track the closest single skeleton in nearest 1 mode
-	if ( SV_TRACKED_SKELETONS_NEAREST1 == m_TrackedSkeletons )
-	{
-	nearestIDs[1] = 0;
-	}
-	m_pNuiSensor->NuiSkeletonSetTrackedSkeletons(nearestIDs);
-	}
-
-	if ( SV_TRACKED_SKELETONS_STICKY1 == m_TrackedSkeletons || SV_TRACKED_SKELETONS_STICKY2 == m_TrackedSkeletons )
-	{
-	DWORD stickyIDs[2] = { m_StickySkeletonIds[0], m_StickySkeletonIds[1] };
-
-	// Only track a single skeleton in sticky 1 mode
-	if ( SV_TRACKED_SKELETONS_STICKY1 == m_TrackedSkeletons )
-	{
-	stickyIDs[1] = 0;
-	}
-	m_pNuiSensor->NuiSkeletonSetTrackedSkeletons(stickyIDs);
-	}
-	*/
-
 }
 
 //Converts the Depthdata to usable pixel data

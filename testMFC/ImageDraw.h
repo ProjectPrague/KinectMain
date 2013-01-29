@@ -2,23 +2,57 @@
 #include "stdafx.h"
 #include <d2d1.h>
 
+/// \class	ImageDraw
+///
+/// \brief	Image draw draws the depthImage.
+
 class ImageDraw
 {
 public:
-	// Constructor
+
+	/// \fn	ImageDraw::ImageDraw();
+	///
+	/// \brief	Default constructor.
+
 	ImageDraw();
 
-	// Destructor
+	/// \fn	ImageDraw::~ImageDraw();
+	///
+	/// \brief	Destructor.
+
 	~ImageDraw();
 
-	//Initialize
+	/// \fn	bool ImageDraw::Initialize( HWND hWnd, ID2D1Factory *& pD2DFactory, int sourceWidth,
+	/// 	int sourceHeight, int sourceStride );
+	///
+	/// \brief	Initializes this object.
+	///
+	/// \param	hWnd			   	Handle of the window.
+	/// \param [in,out]	pD2DFactory	[in,out] If non-null, the D2Dfactory.
+	/// \param	sourceWidth		   	Width of the source.
+	/// \param	sourceHeight	   	Height of the source.
+	/// \param	sourceStride	   	Source stride.
+	///
+	/// \return	true if it succeeds, false if it fails.
+
 	bool Initialize( HWND hWnd, ID2D1Factory *& pD2DFactory, int sourceWidth, int sourceHeight, int sourceStride );
 
-	// Set the window to draw to as well as the video format
-	// implied biets per pixel is 32.
+	/// \fn	bool ImageDraw::GDP ( BYTE * image, unsigned long cbImage);
+	///
+	/// \brief	Draws the image to the screen after checking if the image is ok.
+	///
+	/// \param [in,out]	image	If non-null, the image.
+	/// \param	cbImage		 	The image.
+	///
+	/// \return	true if it succeeds, false if it fails.
+
 	bool GDP ( BYTE * image, unsigned long cbImage);
 
 private:
+
+	/// \fn	void ImageDraw::blankImageDraw( );
+	///
+	/// \brief	Empties the screen.
 
 	void					blankImageDraw( );
 
@@ -33,9 +67,18 @@ private:
     ID2D1HwndRenderTarget *  renderTarget;
     ID2D1Bitmap *            bitmap;
 
+	/// \fn	HRESULT ImageDraw::CreateResources();
+	///
+	/// \brief  Ensure necessary Direct2D resources are created
+	///
+	/// \return	The new resources.
 
-	// Ensure necessary Direct2d resources are created
 	HRESULT CreateResources();
+
+	/// \fn	void ImageDraw::discardResources();
+	///
+	/// \brief	Discard resources.
+
 	void discardResources();
 
 };

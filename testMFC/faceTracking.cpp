@@ -1,7 +1,5 @@
 #include "faceTracking.h"
 
-//TODO: make sure the configs are not hardcoded
-
 FaceTracking::FaceTracking(HWND hwnd, ID2D1Factory *& d2DFactory, CWnd & cWnd)
 {
 	this->cWnd = &cWnd;
@@ -19,6 +17,7 @@ FaceTracking::FaceTracking(HWND hwnd, ID2D1Factory *& d2DFactory, CWnd & cWnd)
 	blueCheck = -1;
 	greenCheck = -1;
 }
+
 
 FaceTracking::~FaceTracking()
 {
@@ -71,9 +70,12 @@ void FaceTracking::setColorVars(NUI_LOCKED_RECT lockedRect, INuiFrameTexture * t
 	memcpy(faceTrackingColorData->GetBuffer(), PBYTE(lockedRect.pBits), min(faceTrackingColorData->GetBufferSize(),UINT(texture->BufferLen())));
 }
 
+
 void FaceTracking::setDepthVars(NUI_LOCKED_RECT lockedRect, INuiFrameTexture * texture){
 	memcpy(faceTrackingDepthData->GetBuffer(), PBYTE(lockedRect.pBits), min(faceTrackingColorData->GetBufferSize(),UINT(texture->BufferLen())));
 }
+
+
 void FaceTracking::setTrackBool(bool b){
 	isTracked = b;
 
@@ -225,6 +227,7 @@ dConfig->Height = height;
 return S_OK;
 } */ // Commented config out.
 
+
 void FaceTracking::faceTrackProcessing()
 {
 	int i = 0;
@@ -335,6 +338,7 @@ void FaceTracking::faceTrackProcessing()
 
 	}	
 }
+
 DWORD WINAPI FaceTracking::faceTrackingThread(PVOID lpParam){
 	FaceTracking * faceTracking = static_cast<FaceTracking*> (lpParam);
 	if (faceTracking){
@@ -342,6 +346,7 @@ DWORD WINAPI FaceTracking::faceTrackingThread(PVOID lpParam){
 	}
 	return 1;
 }
+
 
 DWORD WINAPI FaceTracking::faceTrackingThread()
 {
@@ -474,15 +479,15 @@ void FaceTracking::setFields()
 
 //------Direct2D
 
-const int sourceWidth = 640;
-const int sourceHeight = 480;
+const int SOURCEWIDTH = 640;
+const int SOURCEHEIGHT = 480;
 
 HRESULT FaceTracking::ensureDirect2DResources(){
 	HRESULT hr = S_OK;
 
 	if( !renderTarget  && IsWindow(hWnd))
 	{
-		D2D1_SIZE_U size = D2D1::SizeU( sourceWidth, sourceHeight);
+		D2D1_SIZE_U size = D2D1::SizeU( SOURCEWIDTH, SOURCEHEIGHT);
 
 		D2D1_RENDER_TARGET_PROPERTIES rtProps = D2D1::RenderTargetProperties();
 		rtProps.pixelFormat = D2D1::PixelFormat( DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE);

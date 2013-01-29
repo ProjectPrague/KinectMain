@@ -6,10 +6,6 @@
 #include "kinect.h"		//for kinect stuff
 #include <map>			//used to map kinect ID's to the dropdown ID's.
 #include <iostream>		// for debugging purposes
-#define new DEBUG_NEW
-#ifdef _DEBUG	
-CMemoryState oldMemState, newMemState, diffMemState;
-#endif
 
 //Global variables
 //graphical things
@@ -31,6 +27,10 @@ KinectManager * kinectManager;
 Kinect * kinect;
 std::list<INuiSensor*> nuiList;
 int sliderAngle, kinectAngle, currentSelection;
+
+/// \class	MAINFORM
+///
+/// \brief	The main form.
 
 class MAINFORM: public CDialog
 {
@@ -59,15 +59,16 @@ protected:
 	//Called right after constructor. Initialize things here.
 	virtual BOOL OnInitDialog() 
 	{      
-#ifdef _DEBUG
-		oldMemState.Checkpoint();
-#endif
 		initializePointers();
 		initializeKinect();
 		initializeInterface();
 		CDialog::OnInitDialog();
 		return true; 
 	}
+
+	/// \fn	void initializePointers()
+	///
+	/// \brief	Initializes the pointers.
 
 	void initializePointers()
 	{
@@ -86,6 +87,10 @@ protected:
 		MFC_ecDEPTHCOLOR = (CStatic *) GetDlgItem(1014);
 
 	}
+
+	/// \fn	void initializeInterface()
+	///
+	/// \brief	Initializes the interface.
 
 	void initializeInterface()
 	{
@@ -153,6 +158,11 @@ protected:
 		MFC_ecDEPTHCOLOR->SetFont(cf);
 
 	} 
+
+	/// \fn	void initializeKinect()
+	///
+	/// \brief	Makes a list of kinects and activates the first kinect found.
+
 	void initializeKinect()
 	{
 		//The kinect initializer. Makes sure every thing is ready to be able to work with the kinect.
@@ -168,10 +178,24 @@ protected:
 
 	}
 
+	/// \fn	static DWORD WINAPI setKinectAngle(LPVOID args)
+	///
+	/// \brief	Starts this->setKinectAngle().
+	///
+	/// \param	args	Pointer to this.
+	///
+	/// \return	the setKinectAngle status.
+
 	static DWORD WINAPI setKinectAngle(LPVOID args){
 		MAINFORM *pthis = (MAINFORM *) args;
 		return pthis->setKinectAngle();
 	}
+
+	/// \fn	DWORD WINAPI setKinectAngle()
+	///
+	/// \brief	Sets the viewing angle of the kinect that has been activated.
+	///
+	/// \return	status succesfull.
 
 	DWORD WINAPI setKinectAngle(){
 		// When the buttons has been clicked, set the angle of the kinect.
@@ -192,10 +216,16 @@ protected:
 		return 0;
 	}
 
-	//-----------------------------------------------------------------------------------------
-	// Event definition. These are the methods accessed when the main
+	/// Event definition. These are the methods accessed when the main.
 
 public:
+
+	/// \fn	void OnNMReleasedcapturekinectangle(NMHDR *pNMHDR, LRESULT *pResult)
+	///
+	/// \brief	Is executed in response to the angle slider.
+	///
+	/// \param [in,out]	pNMHDR 	Parameter from MFC.
+	/// \param [out]	pResult	The result.
 
 	void OnNMReleasedcapturekinectangle(NMHDR *pNMHDR, LRESULT *pResult)
 	{
@@ -209,17 +239,25 @@ public:
 
 	}
 
+	/// \fn	void OnBnClickedsetval()
+	///
+	/// \brief	Executes when the slider button is clicked.
+
 	void OnBnClickedsetval()
 	{
 		if (kinectAngle == sliderAngle){
 			return;
 		}
 
-		//If the value from this slider differs from the current kinect value, set it by starting a Thread for doing this.
+		///If the value from this slider differs from the current kinect value, set it by starting a Thread for doing this.
 		DWORD threadID;
 		HANDLE thread = CreateThread(NULL, 0, setKinectAngle, this, 0, &threadID);
 
 	}
+
+	/// \fn	void OnCbnSelchangeKinectlist()
+	///
+	/// \brief	Executes as response to the dropdown menu.
 
 	void OnCbnSelchangeKinectlist()
 	{
@@ -228,19 +266,13 @@ public:
 		std::stringstream ss;
 		text.Format(_T("%d"), changedSelection);
 		OutputDebugString(text);
-		//if(changedSelection != currentSelection)
+		if(changedSelection != currentSelection)
 		{
 
 			OutputDebugString(L"Selection changed!\n");
 			delete kinect;
 			kinect = NULL;
-#ifdef _DEBUG		
-			//if( diffMemState.Difference( oldMemState, newMemState ) )
-			{
-				_CrtDumpMemoryLeaks();
-
-			}
-#endif			
+		
 			if (SUCCEEDED(kinectManager->selectKinect((LPCTSTR) kinectMap[changedSelection], kinect, GetSafeHwnd()))){
 				currentSelection = changedSelection;
 				kinectAngle = kinect->getKinectAngle();
@@ -257,10 +289,18 @@ public:
 
 	}
 
+	/// \fn	void OnFileQuit()
+	///
+	/// \brief	Executes the quit action upon clicking the 'X' in the upper right corner.
+
 	void OnFileQuit()
 	{
 		stopProgram();
 	}
+
+	/// \fn	void OnClose()
+	///
+	/// \brief	Executes the close action when the 'quit' button is pressed.
 
 	void OnClose()
 	{
@@ -270,12 +310,23 @@ public:
 	// declares the message map
 	DECLARE_MESSAGE_MAP()
 };
-//-----------------------------------------------------------------------------------------
+
+/// \class	AppStart
+///
+/// \brief	The main object. It opens the GUI, which does the rest.
+
 class AppStart : public CWinApp
 {
 public:
 	AppStart() {  }
 public:
+
+	/// \fn	virtual BOOL InitInstance()
+	///
+	/// \brief	Initialises the instance.
+	///
+	/// \return	true if it succeeds, false if it fails.
+
 	virtual BOOL InitInstance()
 	{
 		afxMemDF = allocMemDF | checkAlwaysMemDF;
@@ -284,7 +335,6 @@ public:
 		{
 			_CrtSetBreakAlloc( lBreakAlloc );
 		}
-		oldMemState.Checkpoint();
 		CWinApp::InitInstance();
 		MAINFORM dlg;
 		m_pMainWnd = &dlg;

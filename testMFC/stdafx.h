@@ -27,7 +27,13 @@
 #include <cstdlib>
 #include <sstream>
 
-// Safe release for interfaces
+/// \fn	template<class Interface> inline void SafeRelease( Interface *& pInterfaceToRelease )
+///
+/// \brief	Safe release.
+///
+/// \tparam	Interface	Type of the interface.
+/// \param [in,out]	pInterfaceToRelease	[in,out] If non-null, the interface to release.
+
 template<class Interface>
 inline void SafeRelease( Interface *& pInterfaceToRelease )
 {
