@@ -329,7 +329,9 @@ public:
 
 	virtual BOOL InitInstance()
 	{
+#ifdef Debug
 		afxMemDF = allocMemDF | checkAlwaysMemDF;
+#endif
 		long lBreakAlloc = 0;
 		if ( lBreakAlloc > 0 )
 		{

@@ -92,7 +92,9 @@ HRESULT KinectManager::initialize()
 HRESULT KinectManager::selectKinect(CString selected, Kinect *& kinect, HWND hwnd)
 {
 	int i = 0;
+#ifdef Debug
 	CMemoryState mem;
+#endif
 	// create a list of available Nui objects.
 	for (std::list<INuiSensor*>::const_iterator it = nuiList.begin();it != nuiList.end();++it)
 	{
