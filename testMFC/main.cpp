@@ -331,12 +331,13 @@ public:
 	{
 #ifdef Debug
 		afxMemDF = allocMemDF | checkAlwaysMemDF;
-#endif
+
 		long lBreakAlloc = 0;
 		if ( lBreakAlloc > 0 )
 		{
 			_CrtSetBreakAlloc( lBreakAlloc );
 		}
+#endif
 		CWinApp::InitInstance();
 		MAINFORM dlg;
 		m_pMainWnd = &dlg;
